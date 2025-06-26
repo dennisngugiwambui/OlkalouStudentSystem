@@ -1,0 +1,844 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="OlkalouStudentSystem.Views.DashboardPage"
+             Title="{Binding Title}"
+             Shell.NavBarIsVisible="False">
+
+    <!-- Dynamic Background based on theme -->
+    <ContentPage.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="{AppThemeBinding Light=#F8FFF8, Dark=#121212}" Offset="0.0" />
+            <GradientStop Color="{AppThemeBinding Light=#E8F5E8, Dark=#1E1E1E}" Offset="1.0" />
+        </LinearGradientBrush>
+    </ContentPage.Background>
+
+    <Grid>
+        <!-- Main Content -->
+        <RefreshView IsRefreshing="{Binding IsBusy}"
+                     Command="{Binding RefreshCommand}"
+                     RefreshColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}">
+
+            <ScrollView>
+                <VerticalStackLayout Padding="0" Spacing="0">
+
+                    <!-- Header Section with Profile and Menu Button -->
+                    <Border BackgroundColor="{AppThemeBinding Light=#2E7D32, Dark=#1B5E20}"
+                            HeightRequest="220">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="0,0,30,30"/>
+                        </Border.StrokeShape>
+
+                        <!-- Decorative background elements -->
+                        <Grid>
+                            <!-- Background circles -->
+                            <Ellipse Fill="#33FFFFFF" 
+                                     WidthRequest="150" 
+                                     HeightRequest="150"
+                                     HorizontalOptions="End"
+                                     VerticalOptions="Start"
+                                     Margin="0,-50,-50,0" />
+
+                            <Ellipse Fill="#22FFFFFF" 
+                                     WidthRequest="100" 
+                                     HeightRequest="100"
+                                     HorizontalOptions="Start"
+                                     VerticalOptions="End"
+                                     Margin="-30,0,0,-20" />
+
+                            <!-- Main header content -->
+                            <VerticalStackLayout Padding="20,40,20,20" 
+                                                Spacing="10">
+
+                                <!-- Top row with menu, greeting and profile -->
+                                <HorizontalStackLayout HorizontalOptions="Fill" 
+                                                      VerticalOptions="Start">
+
+                                    <!-- Menu Button -->
+                                    <Border BackgroundColor="#66FFFFFF"
+                                            WidthRequest="45"
+                                            HeightRequest="45"
+                                            HorizontalOptions="Start"
+                                            VerticalOptions="Center">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="12"/>
+                                        </Border.StrokeShape>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding ToggleMenuCommand}" />
+                                        </Border.GestureRecognizers>
+                                        <Label Text="☰"
+                                               FontSize="20"
+                                               TextColor="White"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center" />
+                                    </Border>
+
+                                    <VerticalStackLayout HorizontalOptions="Start" 
+                                                        VerticalOptions="Center"
+                                                        Spacing="2"
+                                                        Margin="15,0,0,0">
+                                        <Label Text="{Binding WelcomeMessage}"
+                                               TextColor="#C8E6C9"
+                                               FontSize="14" />
+                                        <Label Text="{Binding UserDisplayName, StringFormat='Welcome back, {0}'}"
+                                               TextColor="White"
+                                               FontSize="18"
+                                               FontAttributes="Bold" />
+                                        <Label Text="{Binding UserType}"
+                                               TextColor="#A5D6A7"
+                                               FontSize="12"
+                                               FontAttributes="Italic" />
+                                    </VerticalStackLayout>
+
+                                    <!-- Profile Avatar -->
+                                    <Border BackgroundColor="White"
+                                            WidthRequest="50"
+                                            HeightRequest="50"
+                                            HorizontalOptions="End"
+                                            VerticalOptions="Center">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="25"/>
+                                        </Border.StrokeShape>
+                                        <Border.Shadow>
+                                            <Shadow Brush="Black" Offset="0,2" Radius="8" Opacity="0.3" />
+                                        </Border.Shadow>
+                                        <Label Text="👤"
+                                               FontSize="24"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center" />
+                                    </Border>
+                                </HorizontalStackLayout>
+
+                                <!-- Student Info Cards (Visible only for students) -->
+                                <HorizontalStackLayout Spacing="15" 
+                                                      Margin="0,20,0,0"
+                                                      IsVisible="{Binding IsStudent}">
+                                    <!-- Admission Number -->
+                                    <Border BackgroundColor="#66FFFFFF"
+                                            Padding="12,8"
+                                            HorizontalOptions="Start">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="15"/>
+                                        </Border.StrokeShape>
+                                        <HorizontalStackLayout Spacing="8">
+                                            <Label Text="🎓" FontSize="14" />
+                                            <Label Text="{Binding Student.AdmissionNo, StringFormat='Adm: {0}'}"
+                                                   TextColor="White"
+                                                   FontSize="12"
+                                                   FontAttributes="Bold" />
+                                        </HorizontalStackLayout>
+                                    </Border>
+
+                                    <!-- Form -->
+                                    <Border BackgroundColor="#66FFFFFF"
+                                            Padding="12,8">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="15"/>
+                                        </Border.StrokeShape>
+                                        <HorizontalStackLayout Spacing="8">
+                                            <Label Text="📚" FontSize="14" />
+                                            <Label Text="{Binding Student.Form, StringFormat='Form {0}'}"
+                                                   TextColor="White"
+                                                   FontSize="12"
+                                                   FontAttributes="Bold" />
+                                        </HorizontalStackLayout>
+                                    </Border>
+                                </HorizontalStackLayout>
+
+                                <!-- Staff Info (Visible only for staff) -->
+                                <Border BackgroundColor="#66FFFFFF"
+                                        Padding="12,8"
+                                        Margin="0,20,0,0"
+                                        HorizontalOptions="Start"
+                                        IsVisible="{Binding IsStaff}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="15"/>
+                                    </Border.StrokeShape>
+                                    <HorizontalStackLayout Spacing="8">
+                                        <Label Text="👨‍💼" FontSize="14" />
+                                        <Label Text="{Binding UserType}"
+                                               TextColor="White"
+                                               FontSize="12"
+                                               FontAttributes="Bold" />
+                                    </HorizontalStackLayout>
+                                </Border>
+
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+
+                    <!-- Main Content based on User Type -->
+                    <VerticalStackLayout Padding="20" Spacing="25">
+
+                        <!-- Student Dashboard Content -->
+                        <VerticalStackLayout IsVisible="{Binding IsStudent}" Spacing="25">
+                            <!-- Student Quick Stats -->
+                            <VerticalStackLayout Spacing="15">
+                                <Label Text="Overview"
+                                       FontSize="20"
+                                       FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}" />
+
+                                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*" RowSpacing="15" ColumnSpacing="15">
+
+                                    <!-- Fee Balance Card -->
+                                    <Border Grid.Row="0" Grid.Column="0" 
+                                            BackgroundColor="{AppThemeBinding Light=White, Dark=#2C2C2C}">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="20"/>
+                                        </Border.StrokeShape>
+                                        <Border.Shadow>
+                                            <Shadow Brush="{AppThemeBinding Light=#00000015, Dark=#00000030}" 
+                                                    Offset="0,4" Radius="15" Opacity="0.1" />
+                                        </Border.Shadow>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding ViewFeesCommand}" />
+                                        </Border.GestureRecognizers>
+                                        <VerticalStackLayout Padding="20" Spacing="8">
+                                            <HorizontalStackLayout>
+                                                <Border BackgroundColor="#FFEBEE"
+                                                        WidthRequest="40" HeightRequest="40"
+                                                        VerticalOptions="Center">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="12"/>
+                                                    </Border.StrokeShape>
+                                                    <Label Text="💰" FontSize="18" 
+                                                           HorizontalOptions="Center" VerticalOptions="Center" />
+                                                </Border>
+                                                <VerticalStackLayout HorizontalOptions="End" Spacing="2">
+                                                    <Label Text="Fee Balance"
+                                                           FontSize="12"
+                                                           TextColor="{AppThemeBinding Light=#666666, Dark=#CCCCCC}" />
+                                                    <Label Text="{Binding DashboardData.CurrentFees.Balance, StringFormat='KSh {0:N0}'}"
+                                                           FontSize="16"
+                                                           FontAttributes="Bold"
+                                                           TextColor="#D32F2F" />
+                                                </VerticalStackLayout>
+                                            </HorizontalStackLayout>
+                                        </VerticalStackLayout>
+                                    </Border>
+
+                                    <!-- Assignments Card -->
+                                    <Border Grid.Row="0" Grid.Column="1" 
+                                            BackgroundColor="{AppThemeBinding Light=White, Dark=#2C2C2C}">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="20"/>
+                                        </Border.StrokeShape>
+                                        <Border.Shadow>
+                                            <Shadow Brush="{AppThemeBinding Light=#00000015, Dark=#00000030}" 
+                                                    Offset="0,4" Radius="15" Opacity="0.1" />
+                                        </Border.Shadow>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding ViewAssignmentsCommand}" />
+                                        </Border.GestureRecognizers>
+                                        <VerticalStackLayout Padding="20" Spacing="8">
+                                            <HorizontalStackLayout>
+                                                <Border BackgroundColor="#FFF3E0"
+                                                        WidthRequest="40" HeightRequest="40"
+                                                        VerticalOptions="Center">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="12"/>
+                                                    </Border.StrokeShape>
+                                                    <Label Text="📝" FontSize="18" 
+                                                           HorizontalOptions="Center" VerticalOptions="Center" />
+                                                </Border>
+                                                <VerticalStackLayout HorizontalOptions="End" Spacing="2">
+                                                    <Label Text="Assignments"
+                                                           FontSize="12"
+                                                           TextColor="{AppThemeBinding Light=#666666, Dark=#CCCCCC}" />
+                                                    <Label Text="{Binding DashboardData.PendingAssignments.Count}"
+                                                           FontSize="16"
+                                                           FontAttributes="Bold"
+                                                           TextColor="#FF9800" />
+                                                </VerticalStackLayout>
+                                            </HorizontalStackLayout>
+                                        </VerticalStackLayout>
+                                    </Border>
+
+                                    <!-- Library Books Card -->
+                                    <Border Grid.Row="1" Grid.Column="0" 
+                                            BackgroundColor="{AppThemeBinding Light=White, Dark=#2C2C2C}">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="20"/>
+                                        </Border.StrokeShape>
+                                        <Border.Shadow>
+                                            <Shadow Brush="{AppThemeBinding Light=#00000015, Dark=#00000030}" 
+                                                    Offset="0,4" Radius="15" Opacity="0.1" />
+                                        </Border.Shadow>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding ViewLibraryCommand}" />
+                                        </Border.GestureRecognizers>
+                                        <VerticalStackLayout Padding="20" Spacing="8">
+                                            <HorizontalStackLayout>
+                                                <Border BackgroundColor="#E8F5E8"
+                                                        WidthRequest="40" HeightRequest="40"
+                                                        VerticalOptions="Center">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="12"/>
+                                                    </Border.StrokeShape>
+                                                    <Label Text="📚" FontSize="18" 
+                                                           HorizontalOptions="Center" VerticalOptions="Center" />
+                                                </Border>
+                                                <VerticalStackLayout HorizontalOptions="End" Spacing="2">
+                                                    <Label Text="Books Issued"
+                                                           FontSize="12"
+                                                           TextColor="{AppThemeBinding Light=#666666, Dark=#CCCCCC}" />
+                                                    <Label Text="{Binding DashboardData.IssuedBooks.Count}"
+                                                           FontSize="16"
+                                                           FontAttributes="Bold"
+                                                           TextColor="#4CAF50" />
+                                                </VerticalStackLayout>
+                                            </HorizontalStackLayout>
+                                        </VerticalStackLayout>
+                                    </Border>
+
+                                    <!-- Achievements Card -->
+                                    <Border Grid.Row="1" Grid.Column="1" 
+                                            BackgroundColor="{AppThemeBinding Light=White, Dark=#2C2C2C}">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="20"/>
+                                        </Border.StrokeShape>
+                                        <Border.Shadow>
+                                            <Shadow Brush="{AppThemeBinding Light=#00000015, Dark=#00000030}" 
+                                                    Offset="0,4" Radius="15" Opacity="0.1" />
+                                        </Border.Shadow>
+                                        <VerticalStackLayout Padding="20" Spacing="8">
+                                            <HorizontalStackLayout>
+                                                <Border BackgroundColor="#F3E5F5"
+                                                        WidthRequest="40" HeightRequest="40"
+                                                        VerticalOptions="Center">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="12"/>
+                                                    </Border.StrokeShape>
+                                                    <Label Text="🏆" FontSize="18" 
+                                                           HorizontalOptions="Center" VerticalOptions="Center" />
+                                                </Border>
+                                                <VerticalStackLayout HorizontalOptions="End" Spacing="2">
+                                                    <Label Text="Achievements"
+                                                           FontSize="12"
+                                                           TextColor="{AppThemeBinding Light=#666666, Dark=#CCCCCC}" />
+                                                    <Label Text="{Binding DashboardData.RecentAchievements.Count}"
+                                                           FontSize="16"
+                                                           FontAttributes="Bold"
+                                                           TextColor="#9C27B0" />
+                                                </VerticalStackLayout>
+                                            </HorizontalStackLayout>
+                                        </VerticalStackLayout>
+                                    </Border>
+
+                                </Grid>
+                            </VerticalStackLayout>
+
+                            <!-- Student Performance Chart -->
+                            <VerticalStackLayout Spacing="15">
+                                <HorizontalStackLayout HorizontalOptions="Fill">
+                                    <Label Text="Academic Performance"
+                                           FontSize="20"
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                           HorizontalOptions="Start" />
+                                    <Label Text="View All"
+                                           FontSize="14"
+                                           TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                           HorizontalOptions="End"
+                                           VerticalOptions="Center">
+                                        <Label.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding ViewPerformanceCommand}" />
+                                        </Label.GestureRecognizers>
+                                    </Label>
+                                </HorizontalStackLayout>
+
+                                <Border BackgroundColor="{AppThemeBinding Light=White, Dark=#2C2C2C}"
+                                        Padding="20"
+                                        HeightRequest="200">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="20"/>
+                                    </Border.StrokeShape>
+                                    <Border.Shadow>
+                                        <Shadow Brush="{AppThemeBinding Light=#00000015, Dark=#00000030}" 
+                                                Offset="0,4" Radius="15" Opacity="0.1" />
+                                    </Border.Shadow>
+
+                                    <!-- Simple Chart Representation -->
+                                    <CollectionView ItemsSource="{Binding DashboardData.AcademicPerformance}"
+                                                    ItemsLayout="HorizontalList"
+                                                    HeightRequest="160">
+                                        <CollectionView.ItemTemplate>
+                                            <DataTemplate>
+                                                <VerticalStackLayout Margin="10,0" WidthRequest="60">
+                                                    <Border BackgroundColor="#4CAF50" 
+                                                            HeightRequest="{Binding CurrentGrade}" 
+                                                            VerticalOptions="End"
+                                                            MinimumHeightRequest="30">
+                                                        <Border.StrokeShape>
+                                                            <RoundRectangle CornerRadius="8,8,0,0"/>
+                                                        </Border.StrokeShape>
+                                                    </Border>
+                                                    <Label Text="{Binding Subject}" 
+                                                           FontSize="10" 
+                                                           HorizontalOptions="Center"
+                                                           TextColor="{AppThemeBinding Light=#666666, Dark=#CCCCCC}"
+                                                           Margin="0,8,0,0"
+                                                           MaxLines="1" />
+                                                    <Label Text="{Binding CurrentGrade, StringFormat='{0}%'}" 
+                                                           FontSize="9" 
+                                                           FontAttributes="Bold"
+                                                           HorizontalOptions="Center"
+                                                           TextColor="#4CAF50" />
+                                                </VerticalStackLayout>
+                                            </DataTemplate>
+                                        </CollectionView.ItemTemplate>
+                                    </CollectionView>
+                                </Border>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+
+                        <!-- Staff Dashboard Content -->
+                        <VerticalStackLayout IsVisible="{Binding IsStaff}" Spacing="25">
+                            <Label Text="Staff Dashboard"
+                                   FontSize="20"
+                                   FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                   HorizontalOptions="Center" />
+
+                            <!-- Staff Quick Actions -->
+                            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*" RowSpacing="15" ColumnSpacing="15">
+
+                                <!-- Students Management (Admin/Secretary) -->
+                                <Border Grid.Row="0" Grid.Column="0"
+                                        BackgroundColor="{AppThemeBinding Light=White, Dark=#2C2C2C}"
+                                        IsVisible="{Binding IsAdmin}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="20"/>
+                                    </Border.StrokeShape>
+                                    <Border.Shadow>
+                                        <Shadow Brush="{AppThemeBinding Light=#00000015, Dark=#00000030}" 
+                                                Offset="0,4" Radius="15" Opacity="0.1" />
+                                    </Border.Shadow>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding ViewStudentsCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <VerticalStackLayout Padding="20" Spacing="10">
+                                        <Label Text="🎓" FontSize="40" HorizontalOptions="Center" />
+                                        <Label Text="Students"
+                                               FontSize="16"
+                                               FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                               HorizontalOptions="Center" />
+                                        <Label Text="Manage Students"
+                                               FontSize="12"
+                                               TextColor="{AppThemeBinding Light=#666666, Dark=#CCCCCC}"
+                                               HorizontalOptions="Center" />
+                                    </VerticalStackLayout>
+                                </Border>
+
+                                <!-- Teachers Management (Admin) -->
+                                <Border Grid.Row="0" Grid.Column="1"
+                                        BackgroundColor="{AppThemeBinding Light=White, Dark=#2C2C2C}"
+                                        IsVisible="{Binding IsAdmin}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="20"/>
+                                    </Border.StrokeShape>
+                                    <Border.Shadow>
+                                        <Shadow Brush="{AppThemeBinding Light=#00000015, Dark=#00000030}" 
+                                                Offset="0,4" Radius="15" Opacity="0.1" />
+                                    </Border.Shadow>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding ViewTeachersCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <VerticalStackLayout Padding="20" Spacing="10">
+                                        <Label Text="👨‍🏫" FontSize="40" HorizontalOptions="Center" />
+                                        <Label Text="Teachers"
+                                               FontSize="16"
+                                               FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                               HorizontalOptions="Center" />
+                                        <Label Text="Manage Staff"
+                                               FontSize="12"
+                                               TextColor="{AppThemeBinding Light=#666666, Dark=#CCCCCC}"
+                                               HorizontalOptions="Center" />
+                                    </VerticalStackLayout>
+                                </Border>
+
+                                <!-- Fees Management (Bursar) -->
+                                <Border Grid.Row="0" Grid.Column="0"
+                                        BackgroundColor="{AppThemeBinding Light=White, Dark=#2C2C2C}"
+                                        IsVisible="{Binding IsBursar}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="20"/>
+                                    </Border.StrokeShape>
+                                    <Border.Shadow>
+                                        <Shadow Brush="{AppThemeBinding Light=#00000015, Dark=#00000030}" 
+                                                Offset="0,4" Radius="15" Opacity="0.1" />
+                                    </Border.Shadow>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding ViewFeesCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <VerticalStackLayout Padding="20" Spacing="10">
+                                        <Label Text="💰" FontSize="40" HorizontalOptions="Center" />
+                                        <Label Text="Fees"
+                                               FontSize="16"
+                                               FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                               HorizontalOptions="Center" />
+                                        <Label Text="Fees Management"
+                                               FontSize="12"
+                                               TextColor="{AppThemeBinding Light=#666666, Dark=#CCCCCC}"
+                                               HorizontalOptions="Center" />
+                                    </VerticalStackLayout>
+                                </Border>
+
+                                <!-- Registration (Secretary) -->
+                                <Border Grid.Row="0" Grid.Column="0"
+                                        BackgroundColor="{AppThemeBinding Light=White, Dark=#2C2C2C}"
+                                        IsVisible="{Binding IsSecretary}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="20"/>
+                                    </Border.StrokeShape>
+                                    <Border.Shadow>
+                                        <Shadow Brush="{AppThemeBinding Light=#00000015, Dark=#00000030}" 
+                                                Offset="0,4" Radius="15" Opacity="0.1" />
+                                    </Border.Shadow>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding RegisterUserCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <VerticalStackLayout Padding="20" Spacing="10">
+                                        <Label Text="Register"
+                                               FontSize="16"
+                                               FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                               HorizontalOptions="Center" />
+                                        <Label Text="Register Users"
+                                               FontSize="12"
+                                               TextColor="{AppThemeBinding Light=#666666, Dark=#CCCCCC}"
+                                               HorizontalOptions="Center" />
+                                    </VerticalStackLayout>
+                                </Border>
+
+                                <!-- Reports -->
+                                <Border Grid.Row="0" Grid.Column="1"
+                                        BackgroundColor="{AppThemeBinding Light=White, Dark=#2C2C2C}"
+                                        IsVisible="{Binding IsStaff}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="20"/>
+                                    </Border.StrokeShape>
+                                    <Border.Shadow>
+                                        <Shadow Brush="{AppThemeBinding Light=#00000015, Dark=#00000030}" 
+                                                Offset="0,4" Radius="15" Opacity="0.1" />
+                                    </Border.Shadow>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding ViewReportsCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <VerticalStackLayout Padding="20" Spacing="10">
+                                        <Label Text="📊" FontSize="40" HorizontalOptions="Center" />
+                                        <Label Text="Reports"
+                                               FontSize="16"
+                                               FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                               HorizontalOptions="Center" />
+                                        <Label Text="View Reports"
+                                               FontSize="12"
+                                               TextColor="{AppThemeBinding Light=#666666, Dark=#CCCCCC}"
+                                               HorizontalOptions="Center" />
+                                    </VerticalStackLayout>
+                                </Border>
+
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <!-- School Information Section (Common for all) -->
+                        <VerticalStackLayout Spacing="15">
+                            <HorizontalStackLayout HorizontalOptions="Fill">
+                                <Label Text="School Information"
+                                       FontSize="20"
+                                       FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                       HorizontalOptions="Start" />
+                                <Label Text="View More"
+                                       FontSize="14"
+                                       TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                       HorizontalOptions="End"
+                                       VerticalOptions="Center">
+                                    <Label.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding ViewSchoolInfoCommand}" />
+                                    </Label.GestureRecognizers>
+                                </Label>
+                            </HorizontalStackLayout>
+
+                            <!-- School Stats -->
+                            <Grid RowDefinitions="Auto" ColumnDefinitions="*,*,*" ColumnSpacing="15">
+
+                                <!-- Total Students -->
+                                <Border Grid.Column="0" 
+                                        BackgroundColor="{AppThemeBinding Light=White, Dark=#2C2C2C}"
+                                        Padding="15">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="15"/>
+                                    </Border.StrokeShape>
+                                    <Border.Shadow>
+                                        <Shadow Brush="{AppThemeBinding Light=#00000015, Dark=#00000030}" 
+                                                Offset="0,4" Radius="15" Opacity="0.1" />
+                                    </Border.Shadow>
+                                    <VerticalStackLayout Spacing="5">
+                                        <Label Text="👥" FontSize="24" HorizontalOptions="Center" />
+                                        <Label Text="850"
+                                               FontSize="18"
+                                               FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                               HorizontalOptions="Center" />
+                                        <Label Text="Students"
+                                               FontSize="12"
+                                               TextColor="{AppThemeBinding Light=#666666, Dark=#CCCCCC}"
+                                               HorizontalOptions="Center" />
+                                    </VerticalStackLayout>
+                                </Border>
+
+                                <!-- Teachers -->
+                                <Border Grid.Column="1" 
+                                        BackgroundColor="{AppThemeBinding Light=White, Dark=#2C2C2C}"
+                                        Padding="15">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="15"/>
+                                    </Border.StrokeShape>
+                                    <Border.Shadow>
+                                        <Shadow Brush="{AppThemeBinding Light=#00000015, Dark=#00000030}" 
+                                                Offset="0,4" Radius="15" Opacity="0.1" />
+                                    </Border.Shadow>
+                                    <VerticalStackLayout Spacing="5">
+                                        <Label Text="👨‍🏫" FontSize="24" HorizontalOptions="Center" />
+                                        <Label Text="45"
+                                               FontSize="18"
+                                               FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                               HorizontalOptions="Center" />
+                                        <Label Text="Teachers"
+                                               FontSize="12"
+                                               TextColor="{AppThemeBinding Light=#666666, Dark=#CCCCCC}"
+                                               HorizontalOptions="Center" />
+                                    </VerticalStackLayout>
+                                </Border>
+
+                                <!-- Years -->
+                                <Border Grid.Column="2" 
+                                        BackgroundColor="{AppThemeBinding Light=White, Dark=#2C2C2C}"
+                                        Padding="15">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="15"/>
+                                    </Border.StrokeShape>
+                                    <Border.Shadow>
+                                        <Shadow Brush="{AppThemeBinding Light=#00000015, Dark=#00000030}" 
+                                                Offset="0,4" Radius="15" Opacity="0.1" />
+                                    </Border.Shadow>
+                                    <VerticalStackLayout Spacing="5">
+                                        <Label Text="🏛️" FontSize="24" HorizontalOptions="Center" />
+                                        <Label Text="25+"
+                                               FontSize="18"
+                                               FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                               HorizontalOptions="Center" />
+                                        <Label Text="Years"
+                                               FontSize="12"
+                                               TextColor="{AppThemeBinding Light=#666666, Dark=#CCCCCC}"
+                                               HorizontalOptions="Center" />
+                                    </VerticalStackLayout>
+                                </Border>
+
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <!-- Recent Activities Section (Common for all) -->
+                        <VerticalStackLayout Spacing="15">
+                            <HorizontalStackLayout HorizontalOptions="Fill">
+                                <Label Text="Recent Updates"
+                                       FontSize="20"
+                                       FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                       HorizontalOptions="Start" />
+                                <Label Text="See All"
+                                       FontSize="14"
+                                       TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                       HorizontalOptions="End"
+                                       VerticalOptions="Center">
+                                    <Label.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding ViewAllActivitiesCommand}" />
+                                    </Label.GestureRecognizers>
+                                </Label>
+                            </HorizontalStackLayout>
+
+                            <CollectionView ItemsSource="{Binding DashboardData.UpcomingActivities}"
+                                            HeightRequest="250">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BackgroundColor="{AppThemeBinding Light=White, Dark=#2C2C2C}" 
+                                                StrokeThickness="0"
+                                                Margin="0,5">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="15"/>
+                                            </Border.StrokeShape>
+                                            <Border.Shadow>
+                                                <Shadow Brush="{AppThemeBinding Light=#00000010, Dark=#00000020}" 
+                                                        Offset="0,2" Radius="8" Opacity="0.1" />
+                                            </Border.Shadow>
+                                            <HorizontalStackLayout Padding="15" Spacing="15">
+                                                <!-- Icon -->
+                                                <Border BackgroundColor="#E8F5E8"
+                                                        WidthRequest="50" HeightRequest="50"
+                                                        VerticalOptions="Center">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="15"/>
+                                                    </Border.StrokeShape>
+                                                    <Label Text="📅" FontSize="20" 
+                                                           HorizontalOptions="Center" VerticalOptions="Center" />
+                                                </Border>
+
+                                                <!-- Content -->
+                                                <VerticalStackLayout HorizontalOptions="FillAndExpand" Spacing="4">
+                                                    <Label Text="{Binding Title}"
+                                                           FontSize="14"
+                                                           FontAttributes="Bold"
+                                                           TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}" />
+                                                    <Label Text="{Binding Description}"
+                                                           FontSize="12"
+                                                           TextColor="{AppThemeBinding Light=#666666, Dark=#CCCCCC}"
+                                                           MaxLines="2" />
+                                                    <Label Text="{Binding Date, StringFormat='{0:MMM dd, yyyy}'}"
+                                                           FontSize="11"
+                                                           TextColor="{AppThemeBinding Light=#999999, Dark=#999999}" />
+                                                </VerticalStackLayout>
+                                            </HorizontalStackLayout>
+                                        </Border>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </VerticalStackLayout>
+
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </ScrollView>
+        </RefreshView>
+
+        <!-- Sidebar Menu Overlay -->
+        <Border BackgroundColor="#80000000"
+                IsVisible="{Binding IsMenuVisible}"
+                HorizontalOptions="Fill"
+                VerticalOptions="Fill">
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding ToggleMenuCommand}" />
+            </Border.GestureRecognizers>
+        </Border>
+
+        <!-- Sidebar Menu -->
+        <Border BackgroundColor="{AppThemeBinding Light=White, Dark=#2C2C2C}"
+                WidthRequest="300"
+                HorizontalOptions="Start"
+                VerticalOptions="Fill"
+                IsVisible="{Binding IsMenuVisible}">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="0,20,20,0"/>
+            </Border.StrokeShape>
+            <Border.Shadow>
+                <Shadow Brush="{AppThemeBinding Light=#00000040, Dark=#00000060}" 
+                        Offset="4,0" Radius="20" Opacity="0.2" />
+            </Border.Shadow>
+
+            <VerticalStackLayout Padding="0" Spacing="0">
+
+                <!-- Menu Header -->
+                <Border BackgroundColor="{AppThemeBinding Light=#2E7D32, Dark=#1B5E20}"
+                        Padding="20"
+                        HeightRequest="150">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="0,20,0,0"/>
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="10" VerticalOptions="Center">
+                        <!-- Profile Picture -->
+                        <Border BackgroundColor="White"
+                                WidthRequest="60"
+                                HeightRequest="60"
+                                HorizontalOptions="Center">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="30"/>
+                            </Border.StrokeShape>
+                            <Label Text="👤"
+                                   FontSize="30"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center" />
+                        </Border>
+
+                        <!-- User Info -->
+                        <VerticalStackLayout Spacing="2" HorizontalOptions="Center">
+                            <Label Text="{Binding UserDisplayName}"
+                                   FontSize="16"
+                                   FontAttributes="Bold"
+                                   TextColor="White"
+                                   HorizontalOptions="Center" />
+                            <Label Text="{Binding UserType}"
+                                   FontSize="12"
+                                   TextColor="#C8E6C9"
+                                   HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Menu Items -->
+                <ScrollView VerticalOptions="FillAndExpand">
+                    <CollectionView ItemsSource="{Binding MenuItems}"
+                                    SelectionMode="None">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Border BackgroundColor="Transparent"
+                                        Padding="0"
+                                        Margin="10,2">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="10"/>
+                                    </Border.StrokeShape>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.NavigateToCommand}"
+                                                              CommandParameter="{Binding Route}" />
+                                    </Border.GestureRecognizers>
+                                    <HorizontalStackLayout Padding="15,12" Spacing="15">
+                                        <!-- Icon -->
+                                        <Label Text="{Binding Icon}"
+                                               FontSize="20"
+                                               VerticalOptions="Center"
+                                               WidthRequest="30" />
+
+                                        <!-- Title -->
+                                        <Label Text="{Binding Title}"
+                                               FontSize="16"
+                                               TextColor="{AppThemeBinding Light=#333333, Dark=#EEEEEE}"
+                                               VerticalOptions="Center"
+                                               HorizontalOptions="FillAndExpand" />
+                                    </HorizontalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </ScrollView>
+
+                <!-- Logout Section -->
+                <Border BackgroundColor="{AppThemeBinding Light=#FFEBEE, Dark=#4A2C2C}"
+                        Padding="15"
+                        Margin="10,10,10,20">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="15"/>
+                    </Border.StrokeShape>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding LogoutCommand}" />
+                    </Border.GestureRecognizers>
+                    <HorizontalStackLayout Spacing="15" HorizontalOptions="Center">
+                        <Label Text="🚪"
+                               FontSize="20"
+                               VerticalOptions="Center" />
+                        <Label Text="LOGOUT"
+                               FontSize="16"
+                               FontAttributes="Bold"
+                               TextColor="#D32F2F"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </Border>
+
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+</ContentPage>

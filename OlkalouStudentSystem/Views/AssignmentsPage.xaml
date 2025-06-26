@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="OlkalouStudentSystem.Views.AssignmentsPage"
+             Title="{Binding Title}"
+             BackgroundColor="#F5F5F5">
+
+    <RefreshView IsRefreshing="{Binding IsBusy}"
+                 Command="{Binding LoadAssignmentsCommand}">
+
+        <ScrollView>
+            <VerticalStackLayout Padding="15" Spacing="15">
+
+                <Label Text="My Assignments"
+                       FontSize="24"
+                       FontAttributes="Bold"
+                       TextColor="#2E7D32"
+                       HorizontalOptions="Center"
+                       Margin="0,10,0,20" />
+
+                <CollectionView ItemsSource="{Binding Assignments}">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border BackgroundColor="White" 
+                                    StrokeThickness="0"
+                                    Margin="0,10">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="15"/>
+                                </Border.StrokeShape>
+                                <VerticalStackLayout Padding="20">
+                                    <!-- Assignment Header -->
+                                    <Label Text="{Binding Title}"
+                                           FontAttributes="Bold"
+                                           TextColor="#2E7D32"
+                                           FontSize="18" />
+
+                                    <Label Text="{Binding Subject}"
+                                           TextColor="#4CAF50"
+                                           FontSize="14"
+                                           FontAttributes="Italic"
+                                           Margin="0,0,0,10" />
+
+                                    <!-- Assignment Details -->
+                                    <Label Text="{Binding Description}"
+                                           TextColor="#333"
+                                           FontSize="14"
+                                           Margin="0,0,0,10" />
+
+                                    <!-- Due Date -->
+                                    <HorizontalStackLayout Spacing="10">
+                                        <Label Text="Due:"
+                                               TextColor="#666"
+                                               FontSize="12" />
+                                        <Label Text="{Binding DueDate, StringFormat='{0:MMM dd, yyyy HH:mm}'}"
+                                               TextColor="{Binding IsOverdue, Converter={StaticResource BoolToColorConverter}}"
+                                               FontSize="12"
+                                               FontAttributes="Bold" />
+                                    </HorizontalStackLayout>
+
+                                    <!-- Teacher -->
+                                    <HorizontalStackLayout Spacing="10" Margin="0,5,0,15">
+                                        <Label Text="Teacher:"
+                                               TextColor="#666"
+                                               FontSize="12" />
+                                        <Label Text="{Binding TeacherName}"
+                                               TextColor="#666"
+                                               FontSize="12" />
+                                    </HorizontalStackLayout>
+
+                                    <!-- Action Buttons -->
+                                    <HorizontalStackLayout Spacing="10" HorizontalOptions="End">
+                                        <Button Text="Download"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DownloadAssignmentCommand}"
+                                                CommandParameter="{Binding .}"
+                                                BackgroundColor="#3F51B5"
+                                                TextColor="White"
+                                                FontSize="12"
+                                                Padding="15,8"
+                                                IsVisible="{Binding FilePath, Converter={StaticResource StringToBoolConverter}}" />
+
+                                        <Button Text="Submit"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.SubmitAssignmentCommand}"
+                                                CommandParameter="{Binding .}"
+                                                BackgroundColor="#4CAF50"
+                                                TextColor="White"
+                                                FontSize="12"
+                                                Padding="15,8" />
+                                    </HorizontalStackLayout>
+
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+</ContentPage>

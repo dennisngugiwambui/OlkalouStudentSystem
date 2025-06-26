@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="OlkalouStudentSystem.Views.LoginPage"
+             Shell.NavBarIsVisible="False">
+
+    <!-- Dynamic Background based on theme -->
+    <ContentPage.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="{AppThemeBinding Light=#E8F5E8, Dark=#1B1B1B}" Offset="0.0" />
+            <GradientStop Color="{AppThemeBinding Light=#C8E6C9, Dark=#2E2E2E}" Offset="1.0" />
+        </LinearGradientBrush>
+    </ContentPage.Background>
+
+    <ScrollView>
+        <Grid RowDefinitions="Auto,*,Auto" Padding="0">
+
+            <!-- Top Decorative Section -->
+            <Border Grid.Row="0" 
+                    HeightRequest="200"
+                    BackgroundColor="{AppThemeBinding Light=#2E7D32, Dark=#1B5E20}">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="0,0,50,50"/>
+                </Border.StrokeShape>
+
+                <!-- Floating elements for visual appeal -->
+                <Grid>
+                    <!-- Background decorative circles -->
+                    <Ellipse Fill="{AppThemeBinding Light=#66FFFFFF, Dark=#33FFFFFF}" 
+                             WidthRequest="120" 
+                             HeightRequest="120"
+                             HorizontalOptions="End"
+                             VerticalOptions="Start"
+                             Margin="0,-20,-30,0" />
+
+                    <Ellipse Fill="{AppThemeBinding Light=#33FFFFFF, Dark=#22FFFFFF}" 
+                             WidthRequest="80" 
+                             HeightRequest="80"
+                             HorizontalOptions="Start"
+                             VerticalOptions="End"
+                             Margin="-20,0,0,-10" />
+
+                    <!-- Main content -->
+                    <VerticalStackLayout VerticalOptions="Center" 
+                                        HorizontalOptions="Center"
+                                        Spacing="10">
+
+                        <!-- Logo with enhanced styling -->
+                        <Border BackgroundColor="{AppThemeBinding Light=White, Dark=#424242}" 
+                                StrokeThickness="0"
+                                HeightRequest="100" 
+                                WidthRequest="100" 
+                                HorizontalOptions="Center">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="25"/>
+                            </Border.StrokeShape>
+                            <Border.Shadow>
+                                <Shadow Brush="{AppThemeBinding Light=Black, Dark=#00000080}" 
+                                        Offset="0,4" 
+                                        Radius="15" 
+                                        Opacity="0.3" />
+                            </Border.Shadow>
+                            <Image Source="dotnet_bot.png" 
+                                   Aspect="AspectFit"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center" />
+                        </Border>
+
+                        <!-- School Name -->
+                        <Label Text="GRACE SECONDARY"
+                               FontSize="22"
+                               FontAttributes="Bold"
+                               TextColor="White"
+                               HorizontalOptions="Center" />
+
+                        <Label Text="SCHOOL"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#C8E6C9, Dark=#81C784}"
+                               HorizontalOptions="Center"
+                               Margin="0,-5,0,0" />
+                    </VerticalStackLayout>
+                </Grid>
+            </Border>
+
+            <!-- Main Content -->
+            <VerticalStackLayout Grid.Row="1" 
+                                Padding="30,40,30,20" 
+                                Spacing="25"
+                                VerticalOptions="Center">
+
+                <!-- Welcome Section -->
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Welcome Back!"
+                           FontSize="28"
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                           HorizontalOptions="Center" />
+
+                    <Label Text="Prayers, Discipline and Hardwork"
+                           FontSize="14"
+                           FontAttributes="Italic"
+                           TextColor="{AppThemeBinding Light=#666666, Dark=#CCCCCC}"
+                           HorizontalOptions="Center"
+                           Opacity="0.8" />
+                </VerticalStackLayout>
+
+                <!-- Login Form Card -->
+                <Border BackgroundColor="{AppThemeBinding Light=White, Dark=#2C2C2C}" 
+                        StrokeThickness="0"
+                        Padding="25">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="20"/>
+                    </Border.StrokeShape>
+                    <Border.Shadow>
+                        <Shadow Brush="{AppThemeBinding Light=#00000020, Dark=#00000040}" 
+                                Offset="0,8" 
+                                Radius="25" 
+                                Opacity="0.15" />
+                    </Border.Shadow>
+
+                    <VerticalStackLayout Spacing="20">
+
+                        <!-- Phone Number Entry -->
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="Phone Number" 
+                                   TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                   FontAttributes="Bold"
+                                   FontSize="14" />
+
+                            <Border x:Name="PhoneBorder"
+                                    BackgroundColor="{AppThemeBinding Light=#F8F9FA, Dark=#3A3A3A}" 
+                                    StrokeThickness="1"
+                                    Stroke="{Binding PhoneErrorMessage, Converter={StaticResource ErrorToColorConverter}}"
+                                    Padding="0"
+                                    HeightRequest="50">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="12"/>
+                                </Border.StrokeShape>
+
+                                <HorizontalStackLayout Spacing="0">
+                                    <!-- Country code with icon -->
+                                    <Border BackgroundColor="{AppThemeBinding Light=#E8F5E8, Dark=#1B5E20}"
+                                            Padding="12,0"
+                                            VerticalOptions="Fill">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="12,0,0,12"/>
+                                        </Border.StrokeShape>
+                                        <Label Text="🇰🇪 +254" 
+                                               TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                               FontSize="14"
+                                               FontAttributes="Bold"
+                                               VerticalOptions="Center" />
+                                    </Border>
+
+                                    <Entry x:Name="PhoneEntry"
+                                           Text="{Binding PhoneNumberDisplay}"
+                                           Placeholder="712345678"
+                                           PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#666666}"
+                                           Keyboard="Numeric"
+                                           MaxLength="9"
+                                           BackgroundColor="Transparent"
+                                           TextColor="{AppThemeBinding Light=#333333, Dark=#EEEEEE}"
+                                           FontSize="16"
+                                           VerticalOptions="Center"
+                                           Margin="15,0"
+                                           TextChanged="OnPhoneEntryTextChanged"
+                                           Focused="OnPhoneEntryFocused"
+                                           Unfocused="OnPhoneEntryUnfocused" />
+                                </HorizontalStackLayout>
+                            </Border>
+
+                            <!-- Phone Error Message -->
+                            <Label Text="{Binding PhoneErrorMessage}"
+                                   TextColor="#F44336"
+                                   FontSize="12"
+                                   IsVisible="{Binding PhoneErrorMessage, Converter={StaticResource StringToBoolConverter}}"
+                                   Margin="5,0,0,0" />
+                        </VerticalStackLayout>
+
+                        <!-- Password Entry -->
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="Password" 
+                                   TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                   FontAttributes="Bold"
+                                   FontSize="14" />
+
+                            <Border x:Name="PasswordBorder"
+                                    BackgroundColor="{AppThemeBinding Light=#F8F9FA, Dark=#3A3A3A}" 
+                                    StrokeThickness="1"
+                                    Stroke="{Binding PasswordErrorMessage, Converter={StaticResource ErrorToColorConverter}}"
+                                    Padding="0"
+                                    HeightRequest="50">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="12"/>
+                                </Border.StrokeShape>
+
+                                <HorizontalStackLayout>
+                                    <!-- Password icon -->
+                                    <Label Text="🔒" 
+                                           FontSize="16"
+                                           VerticalOptions="Center"
+                                           Margin="15,0,5,0"
+                                           Opacity="0.7" />
+
+                                    <Entry x:Name="PasswordEntry"
+                                           Text="{Binding Password}"
+                                           Placeholder="Enter your password"
+                                           PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#666666}"
+                                           IsPassword="True"
+                                           BackgroundColor="Transparent"
+                                           TextColor="{AppThemeBinding Light=#333333, Dark=#EEEEEE}"
+                                           FontSize="16"
+                                           VerticalOptions="Center"
+                                           HorizontalOptions="FillAndExpand"
+                                           Margin="0,0,15,0"
+                                           Focused="OnPasswordEntryFocused"
+                                           Unfocused="OnPasswordEntryUnfocused" />
+                                </HorizontalStackLayout>
+                            </Border>
+
+                            <!-- Password Error Message -->
+                            <Label Text="{Binding PasswordErrorMessage}"
+                                   TextColor="#F44336"
+                                   FontSize="12"
+                                   IsVisible="{Binding PasswordErrorMessage, Converter={StaticResource StringToBoolConverter}}"
+                                   Margin="5,0,0,0" />
+                        </VerticalStackLayout>
+
+                        <!-- Login Button -->
+                        <Button Text="SIGN IN"
+                                Command="{Binding LoginCommand}"
+                                FontAttributes="Bold"
+                                FontSize="16"
+                                HeightRequest="55"
+                                IsEnabled="{Binding IsLoginEnabled}"
+                                Margin="0,10,0,0"
+                                CornerRadius="15">
+                            <Button.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#2E7D32" Offset="0.0" />
+                                    <GradientStop Color="#388E3C" Offset="1.0" />
+                                </LinearGradientBrush>
+                            </Button.Background>
+                            <Button.Shadow>
+                                <Shadow Brush="#2E7D32" Offset="0,4" Radius="15" Opacity="0.3" />
+                            </Button.Shadow>
+                        </Button>
+
+                        <!-- Loading Animation -->
+                        <StackLayout IsVisible="{Binding IsBusy}" 
+                                    HorizontalOptions="Center"
+                                    Orientation="Horizontal"
+                                    Spacing="8"
+                                    Margin="0,10,0,0">
+
+                            <!-- Animated loading dots -->
+                            <Border BackgroundColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                    WidthRequest="8"
+                                    HeightRequest="8"
+                                    VerticalOptions="Center">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="4"/>
+                                </Border.StrokeShape>
+                            </Border>
+
+                            <Label Text="Signing you in" 
+                                   TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                   FontSize="14"
+                                   VerticalOptions="Center" />
+
+                            <Label Text="{Binding LoadingDots}" 
+                                   TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                                   FontSize="14"
+                                   VerticalOptions="Center" />
+                        </StackLayout>
+
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Sign Up Link -->
+                <HorizontalStackLayout HorizontalOptions="Center" Spacing="5">
+                    <Label Text="Don't have an account?"
+                           TextColor="{AppThemeBinding Light=#666666, Dark=#CCCCCC}"
+                           FontSize="14" />
+                    <Label Text="Sign Up"
+                           TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"
+                           FontSize="14"
+                           FontAttributes="Bold">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnSignUpTapped" />
+                        </Label.GestureRecognizers>
+                    </Label>
+                </HorizontalStackLayout>
+
+            </VerticalStackLayout>
+
+            <!-- Footer -->
+            <VerticalStackLayout Grid.Row="2" 
+                                Padding="20"
+                                Spacing="5">
+                <Label Text="© 2025 Grace Secondary School"
+                       FontSize="12"
+                       TextColor="{AppThemeBinding Light=#999999, Dark=#666666}"
+                       HorizontalOptions="Center" />
+
+                <!-- Decorative dots -->
+                <HorizontalStackLayout HorizontalOptions="Center" Spacing="8">
+                    <Ellipse Fill="{AppThemeBinding Light=#2E7D32, Dark=#81C784}" 
+                             WidthRequest="4" 
+                             HeightRequest="4" />
+                    <Ellipse Fill="{AppThemeBinding Light=#4CAF50, Dark=#A5D6A7}" 
+                             WidthRequest="4" 
+                             HeightRequest="4" />
+                    <Ellipse Fill="{AppThemeBinding Light=#81C784, Dark=#C8E6C9}" 
+                             WidthRequest="4" 
+                             HeightRequest="4" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+
+        </Grid>
+    </ScrollView>
+</ContentPage>

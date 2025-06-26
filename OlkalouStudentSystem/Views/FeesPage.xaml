@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="OlkalouStudentSystem.Views.FeesPage"
+             Title="{Binding Title}"
+             BackgroundColor="#F5F5F5">
+
+    <RefreshView IsRefreshing="{Binding IsBusy}"
+                 Command="{Binding LoadFeesCommand}">
+
+        <ScrollView>
+            <VerticalStackLayout Padding="15" Spacing="15">
+
+                <!-- Fee Summary -->
+                <Border BackgroundColor="White" 
+                        StrokeThickness="0"
+                        Padding="20">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="15"/>
+                    </Border.StrokeShape>
+                    <VerticalStackLayout>
+                        <Label Text="Fee Summary"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               TextColor="#2E7D32"
+                               Margin="0,0,0,15" />
+
+                        <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto">
+                            <Label Grid.Row="0" Grid.Column="0"
+                                   Text="Total Fees:"
+                                   FontSize="16"
+                                   TextColor="#333" />
+                            <Label Grid.Row="0" Grid.Column="1"
+                                   Text="{Binding StudentFees.TotalFees, StringFormat='KSh {0:N0}'}"
+                                   FontSize="16"
+                                   FontAttributes="Bold"
+                                   TextColor="#333" />
+
+                            <Label Grid.Row="1" Grid.Column="0"
+                                   Text="Paid Amount:"
+                                   FontSize="16"
+                                   TextColor="#4CAF50" />
+                            <Label Grid.Row="1" Grid.Column="1"
+                                   Text="{Binding StudentFees.PaidAmount, StringFormat='KSh {0:N0}'}"
+                                   FontSize="16"
+                                   FontAttributes="Bold"
+                                   TextColor="#4CAF50" />
+
+                            <Label Grid.Row="2" Grid.Column="0"
+                                   Text="Balance:"
+                                   FontSize="16"
+                                   TextColor="#D32F2F" />
+                            <Label Grid.Row="2" Grid.Column="1"
+                                   Text="{Binding StudentFees.Balance, StringFormat='KSh {0:N0}'}"
+                                   FontSize="16"
+                                   FontAttributes="Bold"
+                                   TextColor="#D32F2F" />
+
+                            <Label Grid.Row="3" Grid.Column="0"
+                                   Text="Due Date:"
+                                   FontSize="14"
+                                   TextColor="#666" />
+                            <Label Grid.Row="3" Grid.Column="1"
+                                   Text="{Binding StudentFees.DueDate, StringFormat='{0:MMM dd, yyyy}'}"
+                                   FontSize="14"
+                                   TextColor="#666" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Fee Structure -->
+                <Label Text="Fee Structure"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="#2E7D32"
+                       Margin="5,10,0,0" />
+
+                <CollectionView ItemsSource="{Binding FeeStructures}">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border BackgroundColor="White" 
+                                    StrokeThickness="0"
+                                    Margin="0,5">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10"/>
+                                </Border.StrokeShape>
+                                <VerticalStackLayout Padding="15">
+                                    <Label Text="{Binding Form, StringFormat='Form {0}'}"
+                                           FontAttributes="Bold"
+                                           TextColor="#2E7D32"
+                                           FontSize="16" />
+                                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto">
+                                        <Label Grid.Row="0" Grid.Column="0"
+                                               Text="Tuition Fees:"
+                                               TextColor="#666" />
+                                        <Label Grid.Row="0" Grid.Column="1"
+                                               Text="{Binding TuitionFees, StringFormat='KSh {0:N0}'}"
+                                               TextColor="#666" />
+
+                                        <Label Grid.Row="1" Grid.Column="0"
+                                               Text="Boarding Fees:"
+                                               TextColor="#666" />
+                                        <Label Grid.Row="1" Grid.Column="1"
+                                               Text="{Binding BoardingFees, StringFormat='KSh {0:N0}'}"
+                                               TextColor="#666" />
+
+                                        <Label Grid.Row="2" Grid.Column="0"
+                                               Text="Exam Fees:"
+                                               TextColor="#666" />
+                                        <Label Grid.Row="2" Grid.Column="1"
+                                               Text="{Binding ExamFees, StringFormat='KSh {0:N0}'}"
+                                               TextColor="#666" />
+
+                                        <Label Grid.Row="3" Grid.Column="0"
+                                               Text="Activity Fees:"
+                                               TextColor="#666" />
+                                        <Label Grid.Row="3" Grid.Column="1"
+                                               Text="{Binding ActivityFees, StringFormat='KSh {0:N0}'}"
+                                               TextColor="#666" />
+
+                                        <Label Grid.Row="4" Grid.Column="0"
+                                               Text="Total:"
+                                               FontAttributes="Bold"
+                                               TextColor="#2E7D32" />
+                                        <Label Grid.Row="4" Grid.Column="1"
+                                               Text="{Binding TotalFees, StringFormat='KSh {0:N0}'}"
+                                               FontAttributes="Bold"
+                                               TextColor="#2E7D32" />
+                                    </Grid>
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <!-- Payment History -->
+                <Label Text="Payment History"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="#2E7D32"
+                       Margin="5,20,0,0" />
+
+                <CollectionView ItemsSource="{Binding Payments}">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border BackgroundColor="White" 
+                                    StrokeThickness="0"
+                                    Margin="0,5">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10"/>
+                                </Border.StrokeShape>
+                                <VerticalStackLayout Padding="15">
+                                    <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto">
+                                        <Label Grid.Row="0" Grid.Column="0"
+                                               Text="{Binding PaymentDate, StringFormat='{0:MMM dd, yyyy}'}"
+                                               FontAttributes="Bold"
+                                               TextColor="#2E7D32" />
+                                        <Label Grid.Row="0" Grid.Column="1"
+                                               Text="{Binding Amount, StringFormat='KSh {0:N0}'}"
+                                               FontAttributes="Bold"
+                                               TextColor="#4CAF50" />
+
+                                        <Label Grid.Row="1" Grid.Column="0"
+                                               Text="{Binding PaymentMode}"
+                                               TextColor="#666"
+                                               FontSize="14" />
+                                        <Label Grid.Row="1" Grid.Column="1"
+                                               Text="{Binding ReceiptNo}"
+                                               TextColor="#666"
+                                               FontSize="14" />
+                                    </Grid>
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+</ContentPage>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Grace Secondary School Brand Colors -->
+  <color name="colorPrimary">#2E7D32</color>
+  <color name="colorPrimaryDark">#1B5E20</color>
+  <color name="colorAccent">#4CAF50</color>
+
+  <!-- Status Bar Colors -->
+  <color name="colorPrimaryVariant">#388E3C</color>
+  <color name="colorOnPrimary">#FFFFFF</color>
+
+  <!-- Background Colors -->
+  <color name="colorSurface">#FFFFFF</color>
+  <color name="colorBackground">#F8FFF8</color>
+
+  <!-- Text Colors -->
+  <color name="colorOnSurface">#2E7D32</color>
+  <color name="colorOnBackground">#333333</color>
+
+  <!-- Navigation Bar -->
+  <color name="navigationBarColor">#FFFFFF</color>
+
+  <!-- Splash Screen -->
+  <color name="splash_background">#2E7D32</color>
+</resources>

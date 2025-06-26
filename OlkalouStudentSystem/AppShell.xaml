@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+       xmlns:local="clr-namespace:OlkalouStudentSystem.Views"
+       x:Class="OlkalouStudentSystem.AppShell"
+       Title="OlkalouStudentSystem">
+
+    <Shell.Resources>
+        <ResourceDictionary>
+            <!-- Base Style for Shell Elements -->
+            <Style x:Key="BaseStyle" TargetType="Element">
+                <Setter Property="Shell.BackgroundColor" Value="{AppThemeBinding Light=#2E7D32, Dark=#1B5E20}" />
+                <Setter Property="Shell.ForegroundColor" Value="White" />
+                <Setter Property="Shell.TitleColor" Value="White" />
+                <Setter Property="Shell.DisabledColor" Value="#B4FFFFFF" />
+                <Setter Property="Shell.UnselectedColor" Value="#95FFFFFF" />
+                <Setter Property="Shell.TabBarBackgroundColor" Value="{AppThemeBinding Light=White, Dark=#2C2C2C}" />
+                <Setter Property="Shell.TabBarForegroundColor" Value="{AppThemeBinding Light=#2E7D32, Dark=#81C784}" />
+                <Setter Property="Shell.TabBarUnselectedColor" Value="{AppThemeBinding Light=#CCCCCC, Dark=#666666}" />
+                <Setter Property="Shell.TabBarTitleColor" Value="{AppThemeBinding Light=#2E7D32, Dark=#81C784}" />
+            </Style>
+
+            <!-- Modern Tab Bar Style -->
+            <Style TargetType="TabBar" BasedOn="{StaticResource BaseStyle}">
+                <Setter Property="Shell.TabBarBackgroundColor" Value="{AppThemeBinding Light=White, Dark=#2C2C2C}" />
+                <Setter Property="Shell.TabBarTitleColor" Value="{AppThemeBinding Light=#2E7D32, Dark=#81C784}" />
+            </Style>
+
+            <!-- Flyout Item Style -->
+            <Style TargetType="FlyoutItem" BasedOn="{StaticResource BaseStyle}" />
+        </ResourceDictionary>
+    </Shell.Resources>
+
+    <!-- Login Page (Hidden from navigation) -->
+    <ShellContent x:Name="LoginPage"
+                  Route="login"
+                  ContentTemplate="{DataTemplate local:LoginPage}"
+                  Shell.NavBarIsVisible="False" />
+
+    <!-- Main App with Bottom Navigation -->
+    <TabBar x:Name="MainTabBar" Route="main">
+
+        <!-- Dashboard Tab - Using Emoji as fallback -->
+        <ShellContent Title="Dashboard"
+                      Route="dashboard"
+                      Icon="dashboard_icon.png"
+                      ContentTemplate="{DataTemplate local:DashboardPage}">
+            <!-- Fallback: Use emoji if font icons don't work -->
+            <!--
+            <ShellContent.Icon>
+                <FontImageSource 
+                    FontFamily="MaterialIconsRegular" 
+                    Glyph="&#xe3af;" 
+                    Color="{AppThemeBinding Light=#2E7D32, Dark=#81C784}" />
+            </ShellContent.Icon>
+            -->
+        </ShellContent>
+
+        <!-- Fees Tab -->
+        <ShellContent Title="Fees"
+                      Route="fees"
+                      Icon="fees_icon.png"
+                      ContentTemplate="{DataTemplate local:FeesPage}">
+            <!--
+            <ShellContent.Icon>
+                <FontImageSource 
+                    FontFamily="MaterialIconsRegular" 
+                    Glyph="&#xe227;" 
+                    Color="{AppThemeBinding Light=#2E7D32, Dark=#81C784}" />
+            </ShellContent.Icon>
+            -->
+        </ShellContent>
+
+        <!-- Assignments Tab -->
+        <ShellContent Title="Assignments"
+                      Route="assignments"
+                      Icon="assignments_icon.png"
+                      ContentTemplate="{DataTemplate local:AssignmentsPage}">
+            <!--
+            <ShellContent.Icon>
+                <FontImageSource 
+                    FontFamily="MaterialIconsRegular" 
+                    Glyph="&#xe85d;" 
+                    Color="{AppThemeBinding Light=#2E7D32, Dark=#81C784}" />
+            </ShellContent.Icon>
+            -->
+        </ShellContent>
+
+        <!-- Library Tab -->
+        <ShellContent Title="Library"
+                      Route="library"
+                      Icon="library_icon.png"
+                      ContentTemplate="{DataTemplate local:LibraryPage}">
+            <!--
+            <ShellContent.Icon>
+                <FontImageSource 
+                    FontFamily="MaterialIconsRegular" 
+                    Glyph="&#xe02f;" 
+                    Color="{AppThemeBinding Light=#2E7D32, Dark=#81C784}" />
+            </ShellContent.Icon>
+            -->
+        </ShellContent>
+
+        <!-- Activities Tab -->
+        <ShellContent Title="Activities"
+                      Route="activities"
+                      Icon="activities_icon.png"
+                      ContentTemplate="{DataTemplate local:ActivitiesPage}">
+            <!--
+            <ShellContent.Icon>
+                <FontImageSource 
+                    FontFamily="MaterialIconsRegular" 
+                    Glyph="&#xe6e1;" 
+                    Color="{AppThemeBinding Light=#2E7D32, Dark=#81C784}" />
+            </ShellContent.Icon>
+            -->
+        </ShellContent>
+
+    </TabBar>
+</Shell>
