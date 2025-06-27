@@ -3,7 +3,6 @@
 // ===============================
 using Microsoft.Extensions.Logging;
 using OlkalouStudentSystem.Models.Data;
-using OlkalouStudentSystem.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -815,12 +814,16 @@ namespace OlkalouStudentSystem.Services
         public decimal? NtscPayment { get; set; }
         public List<string>? Subjects { get; set; }
         public List<string>? AssignedForms { get; set; }
+        public string? Qualification { get; set; }
+        public string? Email { get; set; }
+        public string Department { get; set; } = string.Empty; // Optional, e.g. Science, Arts
     }
 
     public class StaffRegistrationRequest
     {
         public string FullName { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
         public string Position { get; set; } = string.Empty; // Principal, DeputyPrincipal, Secretary, Bursar
         public string? Department { get; set; }
     }

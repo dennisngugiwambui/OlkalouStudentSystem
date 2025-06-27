@@ -1,5 +1,5 @@
 ﻿// ===============================
-// Models/Models.cs - Enhanced Complete School Management Models
+// Models/Models.cs - Updated with Missing Properties
 // ===============================
 using System.Collections.ObjectModel;
 
@@ -94,14 +94,16 @@ namespace OlkalouStudentSystem.Models
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
+        public string EmployeeNumber { get; set; } = string.Empty; // Added missing property
         public EmployeeType EmployeeType { get; set; } = EmployeeType.BOM;
         public string NTSCNumber { get; set; } = string.Empty; // For NTSC teachers
         public string KRAPinNumber { get; set; } = string.Empty;
-        public List<string> QualifiedSubjects { get; set; } = new List<string>();
+        public List<string> QualifiedSubjects { get; set; } = new List<string>(); // Added missing property
         public List<string> AssignedSubjects { get; set; } = new List<string>();
         public List<string> AssignedClasses { get; set; } = new List<string>();
         public string ClassTeacherFor { get; set; } = string.Empty; // If assigned as class teacher
         public DateTime HireDate { get; set; }
+        public DateTime DateJoined { get; set; } = DateTime.Now; // Added missing property
         public DateTime? ContractEndDate { get; set; } // For teaching practice and contract teachers
         public AccountStatus AccountStatus { get; set; } = AccountStatus.Active;
         public decimal MonthlySalary { get; set; }
@@ -114,6 +116,8 @@ namespace OlkalouStudentSystem.Models
         public string NextOfKinPhone { get; set; } = string.Empty;
         public string Qualifications { get; set; } = string.Empty;
         public bool IsClassTeacher { get; set; } = false;
+        public string Department { get; set; } = string.Empty;
+        public List<string> Subjects { get; set; } = new List<string>();
     }
 
     public class Staff
@@ -122,9 +126,11 @@ namespace OlkalouStudentSystem.Models
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
-        public UserType Position { get; set; } = UserType.NonTeachingStaff;
+        public string EmployeeNumber { get; set; } = string.Empty; // Added missing property
+        public string Position { get; set; } = string.Empty; // Changed from UserType to string
         public string JobTitle { get; set; } = string.Empty;
         public DateTime HireDate { get; set; }
+        public DateTime DateJoined { get; set; } = DateTime.Now; // Added missing property
         public AccountStatus AccountStatus { get; set; } = AccountStatus.Active;
         public decimal MonthlySalary { get; set; }
         public string BankAccount { get; set; } = string.Empty;
@@ -575,11 +581,13 @@ namespace OlkalouStudentSystem.Models
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string Type { get; set; } = string.Empty; // Academic, Sports, Leadership, etc.
-        public DateTime Date { get; set; }
+        public DateTime DateAchieved { get; set; } = DateTime.Now; // Added missing property
+        public DateTime Date { get; set; } = DateTime.Now; // Keep for backward compatibility
         public string AwardedBy { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
         public string Level { get; set; } = string.Empty; // School, County, National, etc.
         public string CertificatePath { get; set; } = string.Empty;
+        public int Points { get; set; } = 0; // Added missing property
     }
 
     public class Notification
@@ -610,11 +618,6 @@ namespace OlkalouStudentSystem.Models
         public ObservableCollection<SubjectPerformance> AcademicPerformance { get; set; } = new ObservableCollection<SubjectPerformance>();
         public ObservableCollection<DisciplinaryRecord> RecentDisciplinaryRecords { get; set; } = new ObservableCollection<DisciplinaryRecord>();
         public ObservableCollection<Notification> RecentNotifications { get; set; } = new ObservableCollection<Notification>();
-
-        public static implicit operator DashboardData(DashboardData v)
-        {
-            throw new NotImplementedException();
-        }
     }
 
     public class TeacherDashboardData
@@ -930,5 +933,110 @@ namespace OlkalouStudentSystem.Models
         public bool MeetsPromotionCriteria { get; set; } = true;
         public string Comments { get; set; } = string.Empty;
         public DateTime PromotionDate { get; set; } = DateTime.Now;
+    }
+
+    /// <summary>
+    /// Teacher Class model for teacher dashboard
+    /// </summary>
+    public class TeacherClass
+    {
+        public string ClassId { get; set; } = string.Empty;
+        public string ClassName { get; set; } = string.Empty;
+        public string Subject { get; set; } = string.Empty;
+        public int StudentCount { get; set; }
+        public string Schedule { get; set; } = string.Empty;
+        public string TeacherId { get; set; } = string.Empty;
+        public bool IsActive { get; set; } = true;
+    }
+
+    /// <summary>
+    /// Pending Mark model for teacher grading
+    /// </summary>
+    public class PendingMark
+    {
+        public string MarkId { get; set; } = string.Empty;
+        public string StudentId { get; set; } = string.Empty;
+        public string StudentName { get; set; } = string.Empty;
+        public string AssignmentTitle { get; set; } = string.Empty;
+        public string Subject { get; set; } = string.Empty;
+        public DateTime SubmissionDate { get; set; }
+        public int MaxMarks { get; set; }
+        public string AssignmentId { get; set; } = string.Empty;
+        public string ClassName { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// School Statistics for admin dashboard
+    /// </summary>
+    public class SchoolStatistics
+    {
+        public int TotalStudents { get; set; }
+        public int TotalTeachers { get; set; }
+        public int TotalStaff { get; set; }
+        public int ActiveClasses { get; set; }
+        public decimal PendingFees { get; set; }
+        public double CompletionRate { get; set; }
+        public double AttendanceRate { get; set; }
+        public double PassRate { get; set; }
+        public decimal TotalRevenue { get; set; }
+        public int ActiveStudents { get; set; }
+    }
+
+    /// <summary>
+    /// Admin Activity model for admin dashboard
+    /// </summary>
+    public class AdminActivity
+    {
+        public string ActivityId { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string ActivityType { get; set; } = string.Empty;
+        public DateTime Timestamp { get; set; }
+        public string PerformedBy { get; set; } = string.Empty;
+        public string UserId { get; set; } = string.Empty;
+        public string EntityType { get; set; } = string.Empty;
+        public string EntityId { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Registration Statistics for secretary dashboard
+    /// </summary>
+    public class RegistrationStatistics
+    {
+        public int TotalRegistrations { get; set; }
+        public int NewRegistrationsThisMonth { get; set; }
+        public int PendingApplications { get; set; }
+        public int CompletedRegistrations { get; set; }
+        public int RejectedApplications { get; set; }
+        public int ActiveStudents { get; set; }
+        public int ActiveTeachers { get; set; }
+        public int ActiveStaff { get; set; }
+    }
+
+    /// <summary>
+    /// Financial Statistics for bursar dashboard
+    /// </summary>
+    public class FinancialStatistics
+    {
+        public decimal TotalFeesCollected { get; set; }
+        public decimal PendingFees { get; set; }
+        public decimal MonthlyCollection { get; set; }
+        public decimal ExpectedRevenue { get; set; }
+        public double CollectionRate { get; set; }
+        public int StudentsWithPendingFees { get; set; }
+        public decimal AveragePayment { get; set; }
+        public decimal TotalExpenses { get; set; }
+    }
+
+    /// <summary>
+    /// Basic Statistics for general staff
+    /// </summary>
+    public class BasicStatistics
+    {
+        public int TotalStudents { get; set; }
+        public int TotalTeachers { get; set; }
+        public int ActiveClasses { get; set; }
+        public double TodayAttendance { get; set; }
+        public int PresentStudents { get; set; }
+        public int AbsentStudents { get; set; }
     }
 }

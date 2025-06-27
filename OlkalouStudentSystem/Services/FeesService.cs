@@ -4,11 +4,6 @@
 using Microsoft.Extensions.Logging;
 using OlkalouStudentSystem.Models;
 using OlkalouStudentSystem.Models.Data;
-using OlkalouStudentSystem.Data;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace OlkalouStudentSystem.Services
 {

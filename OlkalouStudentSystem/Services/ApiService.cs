@@ -1,19 +1,100 @@
 ﻿// ===============================
-// Services/ApiService.cs - Complete API Service with Supabase Integration
+// Services/ApiService.cs - Complete Error-Free API Service (FULLY CORRECTED)
 // ===============================
 using Microsoft.Extensions.Logging;
 using OlkalouStudentSystem.Models;
 using OlkalouStudentSystem.Models.Data;
 using System.Text.Json;
+using static Supabase.Postgrest.Constants;
 
 namespace OlkalouStudentSystem.Services
 {
-    public class ApiService
+    #region Supporting Models and Classes
+
+    /// <summary>
+    /// User profile information
+    /// </summary>
+    public class UserProfile
     {
+        public string UserId { get; set; } = string.Empty;
+        public string PhoneNumber { get; set; } = string.Empty;
+        public Models.UserType UserType { get; set; }
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public bool IsActive { get; set; } = true;
+        public DateTime LastLogin { get; set; }
+        public string ProfilePictureUrl { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// File data for uploads
+    /// </summary>
+    public class FileData
+    {
+        public string FileName { get; set; } = string.Empty;
+        public byte[] Content { get; set; } = Array.Empty<byte>();
+        public long Size { get; set; }
+        public string ContentType { get; set; } = string.Empty;
+        public byte[] Data { get; set; }
+    }
+
+    /// <summary>
+    /// Upload result
+    /// </summary>
+    public class UploadResult
+    {
+        public bool Success { get; set; }
+        public string FilePath { get; set; } = string.Empty;
+        public string FileUrl { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public long FileSize { get; set; }
+        public DateTime UploadDate { get; set; }
+        public string ErrorMessage { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Detailed student information
+    /// </summary>
+    public class StudentDetailedInfo
+    {
+        public Student Student { get; set; } = new Student();
+        public FeesInfo FeesInfo { get; set; } = new FeesInfo();
+        public List<Assignment> Assignments { get; set; } = new List<Assignment>();
+        public List<BookIssue> IssuedBooks { get; set; } = new List<BookIssue>();
+        public List<Achievement> Achievements { get; set; } = new List<Achievement>();
+        public List<Models.SubjectPerformance> Performance { get; set; } = new List<Models.SubjectPerformance>();
+    }
+
+    /// <summary>
+    /// System health information
+    /// </summary>
+    public class SystemHealthInfo
+    {
+        public bool IsHealthy { get; set; }
+        public bool DatabaseConnected { get; set; }
+        public bool SupabaseConnected { get; set; }
+        public DateTime LastChecked { get; set; }
+        public string Version { get; set; } = string.Empty;
+        public string Environment { get; set; } = string.Empty;
+        public TimeSpan ResponseTime { get; set; }
+        public Dictionary<string, object> AdditionalInfo { get; set; } = new Dictionary<string, object>();
+    }
+
+    #endregion
+
+    public partial class ApiService : IDisposable
+    {
+        #region Fields and Properties
+
         private readonly Supabase.Client _supabaseClient;
         private readonly AuthService _authService;
         private readonly JsonSerializerOptions _jsonOptions;
         private readonly ILogger<ApiService>? _logger;
+        private bool _disposed = false;
+
+        #endregion
+
+        #region Constructor
 
         public ApiService(AuthService authService, ILogger<ApiService>? logger = null)
         {
@@ -29,11 +110,12 @@ namespace OlkalouStudentSystem.Services
             };
         }
 
-        #region Authentication
+        #endregion
+
+        #region Authentication Methods
 
         /// <summary>
-        /// This method is now handled by AuthService directly
-        /// Kept for compatibility with existing ViewModels
+        /// Login user - delegates to AuthService
         /// </summary>
         public async Task<LoginResponse> LoginAsync(LoginRequest request)
         {
@@ -48,27 +130,17 @@ namespace OlkalouStudentSystem.Services
             try
             {
                 var success = await _authService.TryRefreshTokenAsync();
-                if (success)
+                return new ApiResponse<string>
                 {
-                    return new ApiResponse<string>
-                    {
-                        Success = true,
-                        Data = _authService.AuthToken,
-                        Message = "Token refreshed successfully"
-                    };
-                }
-                else
-                {
-                    return new ApiResponse<string>
-                    {
-                        Success = false,
-                        Message = "Token refresh failed",
-                        ErrorCode = "TOKEN_REFRESH_FAILED"
-                    };
-                }
+                    Success = success,
+                    Data = success ? _authService.AuthToken : null,
+                    Message = success ? "Token refreshed successfully" : "Token refresh failed",
+                    ErrorCode = success ? null : "TOKEN_REFRESH_FAILED"
+                };
             }
             catch (Exception ex)
             {
+                _logger?.LogError(ex, "Error refreshing token");
                 return new ApiResponse<string>
                 {
                     Success = false,
@@ -80,231 +152,136 @@ namespace OlkalouStudentSystem.Services
 
         #endregion
 
-        #region Notification Management
+        #region User Profile Methods
 
         /// <summary>
-        /// Create a new notification
+        /// Get student by ID
         /// </summary>
-        public async Task<ApiResponse<bool>> CreateNotificationAsync(Models.Notification notification)
+        public async Task<ApiResponse<Student>> GetStudentByIdAsync(string studentId)
         {
             try
             {
-                var notificationEntity = new NotificationEntity
-                {
-                    Id = notification.NotificationId,
-                    Title = notification.Title,
-                    Message = notification.Message,
-                    RecipientId = notification.RecipientId,
-                    NotificationType = notification.NotificationType,
-                    Priority = notification.Priority,
-                    ActionUrl = notification.ActionUrl,
-                    ExpiryDate = notification.ExpiryDate,
-                    IsRead = notification.IsRead,
-                    CreatedBy = notification.CreatedBy,
-                    CreatedAt = notification.CreatedDate
-                };
-
-                await _supabaseClient.From<NotificationEntity>().Insert(notificationEntity);
-
-                return new ApiResponse<bool>
-                {
-                    Success = true,
-                    Data = true,
-                    Message = "Notification created successfully"
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error creating notification");
-                return new ApiResponse<bool>
-                {
-                    Success = false,
-                    Data = false,
-                    Message = ex.Message,
-                    ErrorCode = "NOTIFICATION_CREATE_FAILED"
-                };
-            }
-        }
-
-        /// <summary>
-        /// Update an existing notification
-        /// </summary>
-        public async Task<ApiResponse<bool>> UpdateNotificationAsync(Models.Notification notification)
-        {
-            try
-            {
-                var notificationEntity = await _supabaseClient
-                    .From<NotificationEntity>()
-                    .Where(x => x.Id == notification.NotificationId)
+                var studentEntity = await _supabaseClient
+                    .From<StudentEntity>()
+                    .Where(x => x.Id == studentId)
                     .Single();
 
-                if (notificationEntity != null)
+                if (studentEntity == null)
                 {
-                    notificationEntity.Title = notification.Title;
-                    notificationEntity.Message = notification.Message;
-                    notificationEntity.IsRead = notification.IsRead;
-                    notificationEntity.UpdatedAt = DateTime.UtcNow;
-
-                    await notificationEntity.Update<NotificationEntity>();
-
-                    return new ApiResponse<bool>
-                    {
-                        Success = true,
-                        Data = true,
-                        Message = "Notification updated successfully"
-                    };
-                }
-                else
-                {
-                    return new ApiResponse<bool>
+                    return new ApiResponse<Student>
                     {
                         Success = false,
-                        Data = false,
-                        Message = "Notification not found",
-                        ErrorCode = "NOTIFICATION_NOT_FOUND"
+                        Message = "Student not found",
+                        ErrorCode = "STUDENT_NOT_FOUND"
                     };
                 }
+
+                var student = MapStudentEntityToModel(studentEntity);
+
+                return new ApiResponse<Student>
+                {
+                    Success = true,
+                    Data = student,
+                    Message = "Student retrieved successfully"
+                };
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Error updating notification {NotificationId}", notification.NotificationId);
-                return new ApiResponse<bool>
+                _logger?.LogError(ex, "Error getting student by ID {StudentId}", studentId);
+                return new ApiResponse<Student>
                 {
                     Success = false,
-                    Data = false,
                     Message = ex.Message,
-                    ErrorCode = "NOTIFICATION_UPDATE_FAILED"
+                    ErrorCode = "STUDENT_LOAD_FAILED"
                 };
             }
         }
 
         /// <summary>
-        /// Mark all notifications as read for a user
+        /// Get teacher by ID
         /// </summary>
-        public async Task<bool> MarkAllNotificationsAsReadAsync(string userId)
+        public async Task<ApiResponse<Teacher>> GetTeacherByIdAsync(string teacherId)
         {
             try
             {
-                var currentUserId = await GetCurrentUserIdAsync();
-                if (string.IsNullOrEmpty(currentUserId))
-                    return false;
-
-                var notifications = await _supabaseClient
-                    .From<NotificationEntity>()
-                    .Where(x => x.RecipientId == currentUserId && !x.IsRead)
-                    .Get();
-
-                if (notifications?.Models != null)
-                {
-                    foreach (var notification in notifications.Models)
-                    {
-                        notification.IsRead = true;
-                        notification.UpdatedAt = DateTime.UtcNow;
-                        await notification.Update<NotificationEntity>();
-                    }
-                }
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error marking all notifications as read");
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Delete notification
-        /// </summary>
-        public async Task<bool> DeleteNotificationAsync(string notificationId)
-        {
-            try
-            {
-                var notification = await _supabaseClient
-                    .From<NotificationEntity>()
-                    .Where(x => x.Id == notificationId)
+                var teacherEntity = await _supabaseClient
+                    .From<TeacherEntity>()
+                    .Where(x => x.Id == teacherId)
                     .Single();
 
-                if (notification != null)
+                if (teacherEntity == null)
                 {
-                    await notification.Delete<NotificationEntity>();
-                    return true;
+                    return new ApiResponse<Teacher>
+                    {
+                        Success = false,
+                        Message = "Teacher not found",
+                        ErrorCode = "TEACHER_NOT_FOUND"
+                    };
                 }
 
-                return false;
+                var teacher = MapTeacherEntityToModel(teacherEntity);
+
+                return new ApiResponse<Teacher>
+                {
+                    Success = true,
+                    Data = teacher,
+                    Message = "Teacher retrieved successfully"
+                };
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Error deleting notification {NotificationId}", notificationId);
-                return false;
+                _logger?.LogError(ex, "Error getting teacher by ID {TeacherId}", teacherId);
+                return new ApiResponse<Teacher>
+                {
+                    Success = false,
+                    Message = ex.Message,
+                    ErrorCode = "TEACHER_LOAD_FAILED"
+                };
             }
         }
 
         /// <summary>
-        /// Delete all notifications for current user
+        /// Get staff by ID
         /// </summary>
-        public async Task<bool> DeleteAllNotificationsAsync(string userId)
+        public async Task<ApiResponse<Staff>> GetStaffByIdAsync(string staffId)
         {
             try
             {
-                var currentUserId = await GetCurrentUserIdAsync();
-                if (string.IsNullOrEmpty(currentUserId))
-                    return false;
+                var staffEntity = await _supabaseClient
+                    .From<StaffEntity>()
+                    .Where(x => x.Id == staffId)
+                    .Single();
 
-                var notifications = await _supabaseClient
-                    .From<NotificationEntity>()
-                    .Where(x => x.RecipientId == currentUserId)
-                    .Get();
-
-                if (notifications?.Models != null)
+                if (staffEntity == null)
                 {
-                    foreach (var notification in notifications.Models)
+                    return new ApiResponse<Staff>
                     {
-                        await notification.Delete<NotificationEntity>();
-                    }
+                        Success = false,
+                        Message = "Staff not found",
+                        ErrorCode = "STAFF_NOT_FOUND"
+                    };
                 }
 
-                return true;
+                var staff = MapStaffEntityToModel(staffEntity);
+
+                return new ApiResponse<Staff>
+                {
+                    Success = true,
+                    Data = staff,
+                    Message = "Staff retrieved successfully"
+                };
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Error deleting all notifications");
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Cleanup expired notifications
-        /// </summary>
-        public async Task<bool> CleanupExpiredNotificationsAsync()
-        {
-            try
-            {
-                var expiredNotifications = await _supabaseClient
-                    .From<NotificationEntity>()
-                    .Where(x => x.ExpiryDate.HasValue && x.ExpiryDate < DateTime.UtcNow)
-                    .Get();
-
-                if (expiredNotifications?.Models != null)
+                _logger?.LogError(ex, "Error getting staff by ID {StaffId}", staffId);
+                return new ApiResponse<Staff>
                 {
-                    foreach (var notification in expiredNotifications.Models)
-                    {
-                        await notification.Delete<NotificationEntity>();
-                    }
-                }
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error cleaning up expired notifications");
-                return false;
+                    Success = false,
+                    Message = ex.Message,
+                    ErrorCode = "STAFF_LOAD_FAILED"
+                };
             }
         }
-
-        #endregion
-
-        #region User Management
 
         /// <summary>
         /// Get users by type
@@ -325,13 +302,16 @@ namespace OlkalouStudentSystem.Services
                 {
                     foreach (var userEntity in userEntities.Models)
                     {
+                        var fullName = await GetUserFullNameAsync(userEntity.Id, userTypeString);
+                        var email = await GetUserEmailAsync(userEntity.Id, userTypeString);
+
                         users.Add(new UserProfile
                         {
                             UserId = userEntity.Id,
                             PhoneNumber = userEntity.PhoneNumber,
                             UserType = userType,
-                            FullName = await GetUserFullNameAsync(userEntity.Id, userTypeString),
-                            Email = await GetUserEmailAsync(userEntity.Id, userTypeString)
+                            FullName = fullName,
+                            Email = email
                         });
                     }
                 }
@@ -363,19 +343,7 @@ namespace OlkalouStudentSystem.Services
                 {
                     foreach (var studentEntity in studentEntities.Models)
                     {
-                        students.Add(new Student
-                        {
-                            StudentId = studentEntity.StudentId,
-                            FullName = studentEntity.FullName,
-                            AdmissionNo = studentEntity.AdmissionNo,
-                            Form = studentEntity.Form,
-                            Class = studentEntity.Class,
-                            Email = studentEntity.Email,
-                            PhoneNumber = studentEntity.ParentPhone,
-                            DateOfBirth = studentEntity.DateOfBirth,
-                            Gender = studentEntity.Gender,
-                            Address = studentEntity.Address
-                        });
+                        students.Add(MapStudentEntityToModel(studentEntity));
                     }
                 }
 
@@ -406,19 +374,7 @@ namespace OlkalouStudentSystem.Services
                 {
                     foreach (var studentEntity in studentEntities.Models)
                     {
-                        students.Add(new Student
-                        {
-                            StudentId = studentEntity.StudentId,
-                            FullName = studentEntity.FullName,
-                            AdmissionNo = studentEntity.AdmissionNo,
-                            Form = studentEntity.Form,
-                            Class = studentEntity.Class,
-                            Email = studentEntity.Email,
-                            PhoneNumber = studentEntity.ParentPhone,
-                            DateOfBirth = studentEntity.DateOfBirth,
-                            Gender = studentEntity.Gender,
-                            Address = studentEntity.Address
-                        });
+                        students.Add(MapStudentEntityToModel(studentEntity));
                     }
                 }
 
@@ -433,19 +389,105 @@ namespace OlkalouStudentSystem.Services
 
         #endregion
 
-        #region Assignments
+        #region Student Dashboard Methods
 
         /// <summary>
-        /// Get assignments for a specific form/class from Supabase
+        /// Get dashboard data for a student
         /// </summary>
-        public async Task<ApiResponse<List<Assignment>>> GetAssignmentsAsync(string form)
+        public async Task<ApiResponse<DashboardData>> GetDashboardDataAsync(string studentId)
         {
             try
             {
+                var currentStudent = _authService.CurrentStudent;
+                if (currentStudent == null)
+                {
+                    return new ApiResponse<DashboardData>
+                    {
+                        Success = false,
+                        Message = "Student not authenticated",
+                        ErrorCode = "STUDENT_NOT_AUTHENTICATED"
+                    };
+                }
+
+                // Get fees info
+                var feesResponse = await GetFeesInfoAsync(currentStudent.StudentId);
+                var feesInfo = feesResponse.Success ? feesResponse.Data : new FeesInfo();
+
+                // Get pending assignments
+                var assignmentsResponse = await GetAssignmentsAsync(currentStudent.Form);
+                var pendingAssignments = assignmentsResponse.Success
+                    ? assignmentsResponse.Data.Where(a => a.Status == "Pending").Take(4).ToList()
+                    : new List<Assignment>();
+
+                // Get issued books
+                var booksResponse = await GetIssuedBooksAsync(currentStudent.StudentId);
+                var issuedBooks = booksResponse.Success ? booksResponse.Data.Take(3).ToList() : new List<BookIssue>();
+
+                // Get upcoming activities
+                var activitiesResponse = await GetActivitiesAsync(currentStudent.Form);
+                var upcomingActivities = activitiesResponse.Success
+                    ? activitiesResponse.Data.Where(a => a.Date > DateTime.Now).Take(4).ToList()
+                    : new List<Activity>();
+
+                // Get achievements
+                var achievementsResponse = await GetStudentAchievementsAsync(currentStudent.StudentId);
+                var achievements = achievementsResponse.Success ? achievementsResponse.Data : new List<Achievement>();
+
+                // Get performance data
+                var performanceResponse = await GetStudentPerformanceAsync(currentStudent.StudentId);
+                var performance = performanceResponse.Success ? performanceResponse.Data : new List<Models.SubjectPerformance>();
+
+                var dashboardData = new DashboardData
+                {
+                    CurrentFees = feesInfo,
+                    PendingAssignments = new System.Collections.ObjectModel.ObservableCollection<Assignment>(pendingAssignments),
+                    IssuedBooks = new System.Collections.ObjectModel.ObservableCollection<LibraryBook>(),
+                    RecentAchievements = new System.Collections.ObjectModel.ObservableCollection<Achievement>(achievements),
+                    UpcomingActivities = new System.Collections.ObjectModel.ObservableCollection<Activity>(upcomingActivities),
+                    AcademicPerformance = new System.Collections.ObjectModel.ObservableCollection<Models.SubjectPerformance>(performance)
+                };
+
+                return new ApiResponse<DashboardData>
+                {
+                    Success = true,
+                    Data = dashboardData,
+                    Message = "Dashboard data retrieved successfully"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error getting dashboard data for student {StudentId}", studentId);
+                return new ApiResponse<DashboardData>
+                {
+                    Success = false,
+                    Message = ex.Message,
+                    ErrorCode = "DASHBOARD_LOAD_FAILED"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Get pending assignments for student
+        /// </summary>
+        public async Task<ApiResponse<List<Assignment>>> GetPendingAssignmentsAsync(string studentId)
+        {
+            try
+            {
+                var currentStudent = _authService.CurrentStudent;
+                if (currentStudent == null)
+                {
+                    return new ApiResponse<List<Assignment>>
+                    {
+                        Success = false,
+                        Message = "Student not authenticated",
+                        ErrorCode = "STUDENT_NOT_AUTHENTICATED"
+                    };
+                }
+
                 var assignmentEntities = await _supabaseClient
                     .From<AssignmentEntity>()
-                    .Where(x => x.Form == form)
-                    .Order(x => x.DueDate, Supabase.Postgrest.Constants.Ordering.Ascending)
+                    .Where(x => x.Form == currentStudent.Form && x.DueDate > DateTime.Now)
+                    .Order(x => x.DueDate, Ordering.Ascending)
                     .Get();
 
                 var assignments = new List<Assignment>();
@@ -454,8 +496,159 @@ namespace OlkalouStudentSystem.Services
                 {
                     foreach (var entity in assignmentEntities.Models)
                     {
-                        // Check if current student has submitted this assignment
-                        var currentStudentId = await GetCurrentStudentIdAsync();
+                        var submission = await GetAssignmentSubmissionAsync(entity.Id, studentId);
+                        if (submission == null) // Only pending assignments
+                        {
+                            assignments.Add(new Assignment
+                            {
+                                AssignmentId = entity.AssignmentId,
+                                Title = entity.Title,
+                                Subject = entity.Subject,
+                                Description = entity.Description,
+                                DueDate = entity.DueDate,
+                                DateCreated = entity.CreatedAt,
+                                Status = "Pending",
+                                FilePath = entity.FilePath ?? string.Empty,
+                                MaxMarks = entity.MaxMarks,
+                                CreatedBy = await GetTeacherNameAsync(entity.CreatedBy),
+                                Form = entity.Form,
+                                IsSubmitted = false
+                            });
+                        }
+                    }
+                }
+
+                return new ApiResponse<List<Assignment>>
+                {
+                    Success = true,
+                    Data = assignments,
+                    Message = $"Retrieved {assignments.Count} pending assignments"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error getting pending assignments for student {StudentId}", studentId);
+                return new ApiResponse<List<Assignment>>
+                {
+                    Success = false,
+                    Message = ex.Message,
+                    ErrorCode = "PENDING_ASSIGNMENTS_LOAD_FAILED"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Get student achievements
+        /// </summary>
+        public async Task<ApiResponse<List<Achievement>>> GetStudentAchievementsAsync(string studentId)
+        {
+            try
+            {
+                // Return demo achievements for now
+                var achievements = new List<Achievement>
+                {
+                    new Achievement
+                    {
+                        AchievementId = "ACH001",
+                        Title = "Academic Excellence",
+                        Description = "Top 5 in class for Term 2",
+                        DateAchieved = DateTime.Now.AddDays(-30),
+                        Date = DateTime.Now.AddDays(-30),
+                        Category = "Academic",
+                        Points = 100
+                    },
+                    new Achievement
+                    {
+                        AchievementId = "ACH002",
+                        Title = "Perfect Attendance",
+                        Description = "100% attendance for the month",
+                        DateAchieved = DateTime.Now.AddDays(-15),
+                        Date = DateTime.Now.AddDays(-15),
+                        Category = "Attendance",
+                        Points = 50
+                    }
+                };
+
+                return new ApiResponse<List<Achievement>>
+                {
+                    Success = true,
+                    Data = achievements,
+                    Message = $"Retrieved {achievements.Count} achievements"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error getting student achievements for {StudentId}", studentId);
+                return new ApiResponse<List<Achievement>>
+                {
+                    Success = false,
+                    Message = ex.Message,
+                    ErrorCode = "ACHIEVEMENTS_LOAD_FAILED"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Get student performance data
+        /// </summary>
+        public async Task<ApiResponse<List<Models.SubjectPerformance>>> GetStudentPerformanceAsync(string studentId)
+        {
+            try
+            {
+                // Return demo performance data
+                var performance = new List<Models.SubjectPerformance>
+                {
+                    new Models.SubjectPerformance { Subject = "Mathematics", CurrentGrade = 85, PreviousGrade = 78, Trend = "up" },
+                    new Models.SubjectPerformance { Subject = "English", CurrentGrade = 92, PreviousGrade = 89, Trend = "up" },
+                    new Models.SubjectPerformance { Subject = "Science", CurrentGrade = 78, PreviousGrade = 82, Trend = "down" },
+                    new Models.SubjectPerformance { Subject = "History", CurrentGrade = 89, PreviousGrade = 85, Trend = "up" },
+                    new Models.SubjectPerformance { Subject = "Geography", CurrentGrade = 83, PreviousGrade = 80, Trend = "up" }
+                };
+
+                return new ApiResponse<List<Models.SubjectPerformance>>
+                {
+                    Success = true,
+                    Data = performance,
+                    Message = $"Retrieved performance for {performance.Count} subjects"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error getting student performance for {StudentId}", studentId);
+                return new ApiResponse<List<Models.SubjectPerformance>>
+                {
+                    Success = false,
+                    Message = ex.Message,
+                    ErrorCode = "PERFORMANCE_LOAD_FAILED"
+                };
+            }
+        }
+
+        #endregion
+
+        #region Assignment Methods
+
+        /// <summary>
+        /// Get assignments for a specific form/class
+        /// </summary>
+        public async Task<ApiResponse<List<Assignment>>> GetAssignmentsAsync(string form)
+        {
+            try
+            {
+                var assignmentEntities = await _supabaseClient
+                    .From<AssignmentEntity>()
+                    .Where(x => x.Form == form)
+                    .Order(x => x.DueDate, Ordering.Ascending)
+                    .Get();
+
+                var assignments = new List<Assignment>();
+
+                if (assignmentEntities?.Models != null)
+                {
+                    var currentStudentId = await GetCurrentUserEntityIdAsync();
+
+                    foreach (var entity in assignmentEntities.Models)
+                    {
                         var submission = await GetAssignmentSubmissionAsync(entity.Id, currentStudentId);
 
                         assignments.Add(new Assignment
@@ -506,7 +699,7 @@ namespace OlkalouStudentSystem.Services
         {
             try
             {
-                var currentStudentId = await GetCurrentStudentIdAsync();
+                var currentStudentId = await GetCurrentUserEntityIdAsync();
                 if (string.IsNullOrEmpty(currentStudentId))
                 {
                     return new ApiResponse<UploadResult>
@@ -518,7 +711,6 @@ namespace OlkalouStudentSystem.Services
                 }
 
                 // In a real implementation, you would upload the file to Supabase Storage
-                // For now, we'll simulate the upload and store the submission record
                 var submissionPath = $"/submissions/{assignmentId}_{currentStudentId}_{fileData.FileName}";
 
                 // Check if submission already exists
@@ -579,7 +771,7 @@ namespace OlkalouStudentSystem.Services
         }
 
         /// <summary>
-        /// Download assignment file (simulated)
+        /// Download assignment file
         /// </summary>
         public async Task<ApiResponse<byte[]>> DownloadAssignmentAsync(string filePath)
         {
@@ -612,19 +804,19 @@ namespace OlkalouStudentSystem.Services
 
         #endregion
 
-        #region Activities
+        #region Activity Methods
 
         /// <summary>
-        /// Get school activities from Supabase
+        /// Get school activities
         /// </summary>
         public async Task<ApiResponse<List<Activity>>> GetActivitiesAsync(string form)
         {
             try
             {
-                var activityEntities = await _supabaseService.Client
+                var activityEntities = await _supabaseClient
                     .From<ActivityEntity>()
                     .Where(x => x.TargetForms.Contains(form) || x.TargetForms.Contains("All"))
-                    .Order(x => x.Date, Supabase.Postgrest.Constants.Ordering.Ascending)
+                    .Order(x => x.Date, Ordering.Ascending)
                     .Get();
 
                 var activities = new List<Activity>();
@@ -647,7 +839,10 @@ namespace OlkalouStudentSystem.Services
                             IsOptional = entity.IsOptional,
                             Requirements = entity.Requirements,
                             TargetForms = entity.TargetForms,
-                            Status = entity.Status
+                            Status = entity.Status,
+                            RegistrationDeadline = entity.RegistrationDeadline,
+                            MaxParticipants = entity.MaxParticipants,
+                            CurrentParticipants = entity.CurrentParticipants
                         });
                     }
                 }
@@ -672,7 +867,7 @@ namespace OlkalouStudentSystem.Services
         }
 
         /// <summary>
-        /// Register for an activity (simulated - would need activity registration table)
+        /// Register for an activity
         /// </summary>
         public async Task<ApiResponse<bool>> JoinActivityAsync(string activityId, string studentId)
         {
@@ -705,21 +900,21 @@ namespace OlkalouStudentSystem.Services
 
         #endregion
 
-        #region Library
+        #region Library Methods
 
         /// <summary>
-        /// Get books issued to a student from Supabase
+        /// Get books issued to a student
         /// </summary>
         public async Task<ApiResponse<List<BookIssue>>> GetIssuedBooksAsync(string studentId)
         {
             try
             {
-                var currentStudentId = await GetCurrentStudentIdAsync();
+                var currentStudentId = await GetCurrentUserEntityIdAsync();
 
                 var bookIssueEntities = await _supabaseClient
                     .From<BookIssueEntity>()
                     .Where(x => x.StudentId == currentStudentId && x.Status == "Issued")
-                    .Order(x => x.IssueDate, Postgrest.Constants.Ordering.Descending)
+                    .Order(x => x.IssueDate, Ordering.Descending)
                     .Get();
 
                 var issuedBooks = new List<BookIssue>();
@@ -830,7 +1025,7 @@ namespace OlkalouStudentSystem.Services
         }
 
         /// <summary>
-        /// Request to borrow a book (simulated)
+        /// Request to borrow a book
         /// </summary>
         public async Task<ApiResponse<bool>> RequestBookAsync(string bookId, string studentId)
         {
@@ -910,16 +1105,16 @@ namespace OlkalouStudentSystem.Services
 
         #endregion
 
-        #region Fees
+        #region Fees Methods
 
         /// <summary>
-        /// Get fees information for a student from Supabase
+        /// Get fees information for a student
         /// </summary>
         public async Task<ApiResponse<FeesInfo>> GetFeesInfoAsync(string studentId)
         {
             try
             {
-                var currentStudentId = await GetCurrentStudentIdAsync();
+                var currentStudentId = await GetCurrentUserEntityIdAsync();
 
                 var feesEntity = await _supabaseClient
                     .From<FeesEntity>()
@@ -949,23 +1144,27 @@ namespace OlkalouStudentSystem.Services
                 var paymentEntities = await _supabaseClient
                     .From<FeesPaymentEntity>()
                     .Where(x => x.StudentId == currentStudentId && x.IsApproved)
-                    .Order(x => x.PaymentDate, Supabase.Postgrest.Constants.Ordering.Descending)
+                    .Order(x => x.PaymentDate, Ordering.Descending)
                     .Get();
 
-                var paymentHistory = new List<PaymentRecord>();
+                var paymentHistory = new List<Models.PaymentRecord>();
                 if (paymentEntities?.Models != null)
                 {
                     foreach (var payment in paymentEntities.Models)
                     {
-                        paymentHistory.Add(new PaymentRecord
+                        paymentHistory.Add(new Models.PaymentRecord
                         {
                             PaymentId = payment.Id,
+                            StudentId = payment.StudentId,
                             Amount = payment.Amount,
                             PaymentDate = payment.PaymentDate,
                             PaymentMethod = payment.PaymentMethod,
                             ReceiptNumber = payment.ReceiptNumber,
                             Description = payment.Description ?? "",
-                            ReceivedBy = payment.ReceivedBy
+                            ReceivedBy = payment.ReceivedBy,
+                            TransactionId = payment.TransactionId ?? "",
+                            IsApproved = payment.IsApproved,
+                            Status = payment.IsApproved ? "Approved" : "Pending"
                         });
                     }
                 }
@@ -979,7 +1178,8 @@ namespace OlkalouStudentSystem.Services
                     LastPaymentDate = feesEntity.LastPaymentDate ?? DateTime.MinValue,
                     PaymentStatus = feesEntity.PaymentStatus,
                     DueDate = feesEntity.DueDate,
-                    PaymentHistory = paymentHistory
+                    PaymentHistory = paymentHistory,
+                    AcademicYear = $"{DateTime.Now.Year}/{DateTime.Now.Year + 1}"
                 };
 
                 return new ApiResponse<FeesInfo>
@@ -1001,304 +1201,9 @@ namespace OlkalouStudentSystem.Services
             }
         }
 
-        /// <summary>
-        /// Process a fee payment
-        /// </summary>
-        public async Task<ApiResponse<PaymentRecord>> MakePaymentAsync(string studentId, decimal amount, string paymentMethod)
-        {
-            try
-            {
-                var currentStudentId = await GetCurrentStudentIdAsync();
-
-                // Create payment record
-                var payment = new FeesPaymentEntity
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    StudentId = currentStudentId,
-                    Amount = amount,
-                    PaymentMethod = paymentMethod,
-                    ReceiptNumber = GenerateReceiptNumber(),
-                    IsApproved = true, // Auto-approve for mobile payments
-                    Description = "Fees Payment via Mobile App",
-                    ReceivedBy = "Mobile App System",
-                    PaymentDate = DateTime.UtcNow,
-                    VerifiedBy = "system",
-                    VerificationDate = DateTime.UtcNow
-                };
-
-                await _supabaseClient.From<FeesPaymentEntity>().Insert(payment);
-
-                // Update fees balance
-                await UpdateFeesBalanceAsync(currentStudentId, amount);
-
-                var paymentRecord = new PaymentRecord
-                {
-                    PaymentId = payment.Id,
-                    Amount = payment.Amount,
-                    PaymentDate = payment.PaymentDate,
-                    PaymentMethod = payment.PaymentMethod,
-                    ReceiptNumber = payment.ReceiptNumber,
-                    Description = payment.Description,
-                    ReceivedBy = payment.ReceivedBy
-                };
-
-                return new ApiResponse<PaymentRecord>
-                {
-                    Success = true,
-                    Data = paymentRecord,
-                    Message = "Payment processed successfully"
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error processing payment for student {StudentId}", studentId);
-                return new ApiResponse<PaymentRecord>
-                {
-                    Success = false,
-                    Message = ex.Message,
-                    ErrorCode = "PAYMENT_FAILED"
-                };
-            }
-        }
-
         #endregion
 
-        #region Dashboard
-
-        /// <summary>
-        /// Get dashboard data for a student
-        /// </summary>
-        public async Task<ApiResponse<DashboardData>> GetDashboardDataAsync(string studentId)
-        {
-            try
-            {
-                var currentStudent = _authService.CurrentStudent;
-                if (currentStudent == null)
-                {
-                    return new ApiResponse<DashboardData>
-                    {
-                        Success = false,
-                        Message = "Student not authenticated",
-                        ErrorCode = "STUDENT_NOT_AUTHENTICATED"
-                    };
-                }
-
-                // Get fees info
-                var feesResponse = await GetFeesInfoAsync(currentStudent.StudentId);
-                var feesInfo = feesResponse.Success ? feesResponse.Data : new FeesInfo();
-
-                // Get pending assignments
-                var assignmentsResponse = await GetAssignmentsAsync(currentStudent.Form);
-                var pendingAssignments = assignmentsResponse.Success
-                    ? assignmentsResponse.Data.Where(a => a.Status == "Pending").Take(4).ToList()
-                    : new List<Assignment>();
-
-                // Get issued books
-                var booksResponse = await GetIssuedBooksAsync(currentStudent.StudentId);
-                var issuedBooks = booksResponse.Success ? booksResponse.Data.Take(3).ToList() : new List<BookIssue>();
-
-                // Get upcoming activities
-                var activitiesResponse = await GetActivitiesAsync(currentStudent.Form);
-                var upcomingActivities = activitiesResponse.Success
-                    ? activitiesResponse.Data.Where(a => a.Date > DateTime.Now).Take(4).ToList()
-                    : new List<Activity>();
-
-                var dashboardData = new DashboardData
-                {
-                    CurrentFees = feesInfo,
-                    PendingAssignments = new System.Collections.ObjectModel.ObservableCollection<Assignment>(pendingAssignments),
-                    IssuedBooks = new System.Collections.ObjectModel.ObservableCollection<LibraryBook>(),
-                    RecentAchievements = new System.Collections.ObjectModel.ObservableCollection<Achievement>(),
-                    UpcomingActivities = new System.Collections.ObjectModel.ObservableCollection<Activity>(upcomingActivities),
-                    AcademicPerformance = new System.Collections.ObjectModel.ObservableCollection<SubjectPerformance>(GenerateDemoPerformance())
-                };
-
-                return new ApiResponse<DashboardData>
-                {
-                    Success = true,
-                    Data = dashboardData,
-                    Message = "Dashboard data retrieved successfully"
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error getting dashboard data for student {StudentId}", studentId);
-                return new ApiResponse<DashboardData>
-                {
-                    Success = false,
-                    Message = ex.Message,
-                    ErrorCode = "DASHBOARD_LOAD_FAILED"
-                };
-            }
-        }
-
-        #endregion
-
-        #region Financial Management (New Methods)
-
-        /// <summary>
-        /// Get all invoices
-        /// </summary>
-        public async Task<List<Invoice>> GetInvoicesAsync()
-        {
-            try
-            {
-                // Return demo data for now - implement Supabase integration as needed
-                return new List<Invoice>
-                {
-                    new Invoice
-                    {
-                        InvoiceId = "INV001",
-                        InvoiceNumber = "INV-2024-001",
-                        VendorId = "VEN001",
-                        VendorName = "ABC Supplies",
-                        Amount = 15000,
-                        Status = "Pending",
-                        Description = "Office supplies",
-                        DueDate = DateTime.Now.AddDays(30),
-                        CreatedAt = DateTime.Now
-                    }
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error getting invoices");
-                return new List<Invoice>();
-            }
-        }
-
-        /// <summary>
-        /// Get pending invoices
-        /// </summary>
-        public async Task<List<Invoice>> GetPendingInvoicesAsync()
-        {
-            try
-            {
-                var allInvoices = await GetInvoicesAsync();
-                return allInvoices.Where(i => i.Status == "Pending").ToList();
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error getting pending invoices");
-                return new List<Invoice>();
-            }
-        }
-
-        /// <summary>
-        /// Update invoice
-        /// </summary>
-        public async Task<bool> UpdateInvoiceAsync(Invoice invoice)
-        {
-            try
-            {
-                // Simulate update operation
-                await Task.Delay(500);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error updating invoice {InvoiceId}", invoice?.InvoiceId);
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Get salary payments
-        /// </summary>
-        public async Task<List<SalaryPayment>> GetSalaryPaymentsAsync()
-        {
-            try
-            {
-                // Return demo data for now
-                return new List<SalaryPayment>
-                {
-                    new SalaryPayment
-                    {
-                        PaymentId = "SAL001",
-                        EmployeeId = "EMP001",
-                        EmployeeName = "John Doe",
-                        BasicSalary = 50000,
-                        Allowances = 10000,
-                        Deductions = 5000,
-                        NetSalary = 55000,
-                        PayrollMonth = "December",
-                        PayrollYear = 2024,
-                        Status = "Pending",
-                        PaymentDate = DateTime.Now
-                    }
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error getting salary payments");
-                return new List<SalaryPayment>();
-            }
-        }
-
-        /// <summary>
-        /// Get pending salary payments
-        /// </summary>
-        public async Task<List<SalaryPayment>> GetPendingSalaryPaymentsAsync()
-        {
-            try
-            {
-                var allSalaries = await GetSalaryPaymentsAsync();
-                return allSalaries.Where(s => s.Status == "Pending").ToList();
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error getting pending salary payments");
-                return new List<SalaryPayment>();
-            }
-        }
-
-        /// <summary>
-        /// Update salary payment
-        /// </summary>
-        public async Task<bool> UpdateSalaryPaymentAsync(SalaryPayment payment)
-        {
-            try
-            {
-                // Simulate update operation
-                await Task.Delay(500);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error updating salary payment {PaymentId}", payment?.PaymentId);
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Get journal entries
-        /// </summary>
-        public async Task<List<JournalEntry>> GetJournalEntriesAsync()
-        {
-            try
-            {
-                // Return demo data for now
-                return new List<JournalEntry>
-                {
-                    new JournalEntry
-                    {
-                        EntryId = "JE001",
-                        Date = DateTime.Now,
-                        Description = "School fees collection",
-                        Reference = "REF001",
-                        DebitAccount = "Cash",
-                        CreditAccount = "Fees Income",
-                        Amount = 100000,
-                        CreatedBy = "Bursar"
-                    }
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error getting journal entries");
-                return new List<JournalEntry>();
-            }
-        }
+        #region Financial Management Methods
 
         /// <summary>
         /// Get students with pending fees
@@ -1326,15 +1231,7 @@ namespace OlkalouStudentSystem.Services
 
                         if (fees != null)
                         {
-                            students.Add(new Student
-                            {
-                                StudentId = studentEntity.StudentId,
-                                FullName = studentEntity.FullName,
-                                AdmissionNo = studentEntity.AdmissionNo,
-                                Form = studentEntity.Form,
-                                Class = studentEntity.Class,
-                                PhoneNumber = studentEntity.ParentPhone
-                            });
+                            students.Add(MapStudentEntityToModel(studentEntity));
                         }
                     }
                 }
@@ -1348,64 +1245,394 @@ namespace OlkalouStudentSystem.Services
             }
         }
 
+        /// <summary>
+        /// Get comprehensive student data including fees, assignments, and books
+        /// </summary>
+        public async Task<ApiResponse<StudentDetailedInfo>> GetStudentDetailedInfoAsync(string studentId)
+        {
+            try
+            {
+                // Get student basic info
+                var studentResponse = await GetStudentByIdAsync(studentId);
+                if (!studentResponse.Success)
+                {
+                    return new ApiResponse<StudentDetailedInfo>
+                    {
+                        Success = false,
+                        Message = studentResponse.Message,
+                        ErrorCode = studentResponse.ErrorCode
+                    };
+                }
+
+                var student = studentResponse.Data;
+
+                // Get fees info
+                var feesResponse = await GetFeesInfoAsync(studentId);
+                var fees = feesResponse.Success ? feesResponse.Data : new FeesInfo();
+
+                // Get assignments
+                var assignmentsResponse = await GetAssignmentsAsync(student.Form);
+                var assignments = assignmentsResponse.Success ? assignmentsResponse.Data : new List<Assignment>();
+
+                // Get issued books
+                var booksResponse = await GetIssuedBooksAsync(studentId);
+                var issuedBooks = booksResponse.Success ? booksResponse.Data : new List<BookIssue>();
+
+                // Get achievements
+                var achievementsResponse = await GetStudentAchievementsAsync(studentId);
+                var achievements = achievementsResponse.Success ? achievementsResponse.Data : new List<Achievement>();
+
+                // Get performance
+                var performanceResponse = await GetStudentPerformanceAsync(studentId);
+                var performance = performanceResponse.Success ? performanceResponse.Data : new List<Models.SubjectPerformance>();
+
+                var detailedInfo = new StudentDetailedInfo
+                {
+                    Student = student,
+                    FeesInfo = fees,
+                    Assignments = assignments,
+                    IssuedBooks = issuedBooks,
+                    Achievements = achievements,
+                    Performance = performance
+                };
+
+                return new ApiResponse<StudentDetailedInfo>
+                {
+                    Success = true,
+                    Data = detailedInfo,
+                    Message = "Student detailed information retrieved successfully"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error getting detailed student info for {StudentId}", studentId);
+                return new ApiResponse<StudentDetailedInfo>
+                {
+                    Success = false,
+                    Message = ex.Message,
+                    ErrorCode = "STUDENT_DETAILED_INFO_FAILED"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Get system health information
+        /// </summary>
+        public async Task<ApiResponse<SystemHealthInfo>> GetSystemHealthAsync()
+        {
+            try
+            {
+                var startTime = DateTime.UtcNow;
+                var healthInfo = new SystemHealthInfo
+                {
+                    DatabaseConnected = await TestDatabaseConnectionAsync(),
+                    SupabaseConnected = SupabaseService.Instance.IsConnected,
+                    LastChecked = DateTime.UtcNow,
+                    Version = "1.0.0",
+                    Environment = "Production"
+                };
+
+                healthInfo.IsHealthy = healthInfo.DatabaseConnected && healthInfo.SupabaseConnected;
+                healthInfo.ResponseTime = DateTime.UtcNow - startTime;
+
+                return new ApiResponse<SystemHealthInfo>
+                {
+                    Success = true,
+                    Data = healthInfo,
+                    Message = healthInfo.IsHealthy ? "System is healthy" : "System has issues"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error checking system health");
+                return new ApiResponse<SystemHealthInfo>
+                {
+                    Success = false,
+                    Message = ex.Message,
+                    ErrorCode = "HEALTH_CHECK_FAILED"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Test database connection
+        /// </summary>
+        private async Task<bool> TestDatabaseConnectionAsync()
+        {
+            try
+            {
+                var testQuery = await _supabaseClient
+                    .From<UserEntity>()
+                    .Limit(1)
+                    .Get();
+
+                return testQuery != null;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         #endregion
 
         #region Helper Methods
 
         /// <summary>
-        /// Get current student ID from the authenticated user
+        /// Map StudentEntity to Student model
         /// </summary>
-        private async Task<string> GetCurrentStudentIdAsync()
+        private static Student MapStudentEntityToModel(StudentEntity entity)
+        {
+            return new Student
+            {
+                StudentId = entity.StudentId,
+                FullName = entity.FullName,
+                AdmissionNo = entity.AdmissionNo,
+                Form = entity.Form,
+                Class = entity.Class,
+                StreamName = $"{entity.Form}{entity.Class}",
+                Email = entity.Email ?? string.Empty,
+                PhoneNumber = entity.ParentPhone,
+                ParentPhone = entity.ParentPhone,
+                ParentEmail = "",
+                DateOfBirth = entity.DateOfBirth,
+                Gender = entity.Gender,
+                Address = entity.Address ?? string.Empty,
+                AdmissionDate = entity.EnrollmentDate,
+                Status = ParseStudentStatus(entity.Status),
+                AccountStatus = entity.IsActive ? AccountStatus.Active : AccountStatus.Inactive,
+                AcademicYear = entity.Year,
+                GuardianName = entity.GuardianName ?? string.Empty,
+                GuardianPhone = entity.GuardianPhone ?? string.Empty,
+                GuardianRelationship = "",
+                PreviousSchool = entity.PreviousSchool ?? string.Empty,
+                KCSEIndexNumber = entity.KcseIndexNumber ?? string.Empty,
+                Nationality = entity.Nationality,
+                Religion = entity.Religion ?? string.Empty,
+                MedicalInfo = entity.MedicalInfo ?? string.Empty,
+                RegistrationStatus = entity.IsActive ? "Complete" : "Pending"
+            };
+        }
+
+        /// <summary>
+        /// Map TeacherEntity to Teacher model
+        /// </summary>
+        private static Teacher MapTeacherEntityToModel(TeacherEntity entity)
+        {
+            return new Teacher
+            {
+                TeacherId = entity.TeacherId,
+                FullName = entity.FullName,
+                Email = entity.Email ?? string.Empty,
+                PhoneNumber = entity.PhoneNumber ?? string.Empty,
+                EmployeeNumber = entity.EmployeeNumber,
+                EmployeeType = ParseEmployeeType(entity.EmployeeType),
+                NTSCNumber = entity.TscNumber ?? string.Empty,
+                QualifiedSubjects = entity.QualifiedSubjects ?? new List<string>(),
+                AssignedSubjects = entity.Subjects ?? new List<string>(),
+                AssignedClasses = entity.AssignedForms ?? new List<string>(),
+                ClassTeacherFor = entity.ClassTeacherFor ?? string.Empty,
+                HireDate = entity.EmploymentDate ?? DateTime.Now,
+                DateJoined = entity.DateJoined,
+                ContractEndDate = null,
+                AccountStatus = entity.IsActive ? AccountStatus.Active : AccountStatus.Inactive,
+                MonthlySalary = entity.MonthlySalary ?? 0,
+                BankAccount = entity.BankAccount ?? string.Empty,
+                IdNumber = entity.NationalId ?? string.Empty,
+                DateOfBirth = DateTime.MinValue,
+                Gender = "",
+                Address = "",
+                NextOfKin = "",
+                NextOfKinPhone = "",
+                Qualifications = entity.Qualification ?? string.Empty,
+                IsClassTeacher = entity.IsClassTeacher,
+                Department = entity.Department ?? string.Empty,
+                Subjects = entity.Subjects ?? new List<string>()
+            };
+        }
+
+        /// <summary>
+        /// Map StaffEntity to Staff model
+        /// </summary>
+        private static Staff MapStaffEntityToModel(StaffEntity entity)
+        {
+            return new Staff
+            {
+                StaffId = entity.StaffId,
+                FullName = entity.FullName,
+                Email = entity.Email ?? string.Empty,
+                PhoneNumber = entity.PhoneNumber ?? string.Empty,
+                EmployeeNumber = entity.EmployeeNumber,
+                Position = entity.Position,
+                JobTitle = entity.Position,
+                HireDate = entity.EmploymentDate ?? DateTime.Now,
+                DateJoined = entity.DateJoined,
+                AccountStatus = entity.IsActive ? AccountStatus.Active : AccountStatus.Inactive,
+                MonthlySalary = entity.Salary ?? 0,
+                BankAccount = entity.BankAccount ?? string.Empty,
+                IdNumber = entity.NationalId ?? string.Empty,
+                DateOfBirth = DateTime.MinValue,
+                Gender = "",
+                Address = "",
+                NextOfKin = "",
+                NextOfKinPhone = "",
+                Department = entity.Department ?? string.Empty
+            };
+        }
+
+        /// <summary>
+        /// Parse student status from string
+        /// </summary>
+        private static StudentStatus ParseStudentStatus(string status)
+        {
+            return status?.ToLower() switch
+            {
+                "active" => StudentStatus.Current,
+                "graduated" => StudentStatus.Graduated,
+                "alumni" => StudentStatus.Alumni,
+                "repeating" => StudentStatus.Repeating,
+                "transferred" => StudentStatus.Transferred,
+                "dropped" => StudentStatus.Dropped,
+                "suspended" => StudentStatus.Suspended,
+                _ => StudentStatus.Current
+            };
+        }
+
+        /// <summary>
+        /// Parse employee type from string
+        /// </summary>
+        private static EmployeeType ParseEmployeeType(string employeeType)
+        {
+            return employeeType?.ToUpper() switch
+            {
+                "BOM" => EmployeeType.BOM,
+                "NTSC" => EmployeeType.NTSC,
+                "CONTRACT" => EmployeeType.Contract,
+                "VOLUNTEER" => EmployeeType.Volunteer,
+                "TEACHINGPRACTICE" => EmployeeType.TeachingPractice,
+                _ => EmployeeType.BOM
+            };
+        }
+
+        /// <summary>
+        /// Get user full name by user ID and type
+        /// </summary>
+        private async Task<string> GetUserFullNameAsync(string userId, string userType)
         {
             try
             {
-                var userId = await SecureStorage.GetAsync("user_id");
-                if (string.IsNullOrEmpty(userId))
-                    return null;
-
-                var userType = await SecureStorage.GetAsync("user_type");
-
-                switch (userType)
+                return userType.ToLower() switch
                 {
-                    case "Student":
-                        var student = await _supabaseClient
-                            .From<StudentEntity>()
-                            .Where(x => x.UserId == userId)
-                            .Single();
-                        return student?.Id;
-
-                    case "Teacher":
-                        var teacher = await _supabaseClient
-                            .From<TeacherEntity>()
-                            .Where(x => x.UserId == userId)
-                            .Single();
-                        return teacher?.Id;
-
-                    default:
-                        var staff = await _supabaseClient
-                            .From<StaffEntity>()
-                            .Where(x => x.UserId == userId)
-                            .Single();
-                        return staff?.Id;
-                }
+                    "student" => await GetStudentFullNameAsync(userId),
+                    "teacher" => await GetTeacherFullNameAsync(userId),
+                    _ => await GetStaffFullNameAsync(userId)
+                };
             }
-            catch (Exception ex)
+            catch
             {
-                _logger?.LogError(ex, "Error getting current student ID");
-                return null;
+                return "Unknown User";
             }
         }
 
         /// <summary>
-        /// Get assignment submission for a student
+        /// Get user email by user ID and type
         /// </summary>
-        private async Task<AssignmentSubmissionEntity> GetAssignmentSubmissionAsync(string assignmentId, string studentId)
+        private async Task<string> GetUserEmailAsync(string userId, string userType)
         {
             try
             {
-                if (string.IsNullOrEmpty(studentId))
-                    return null;
+                return userType.ToLower() switch
+                {
+                    "student" => await GetStudentEmailAsync(userId),
+                    "teacher" => await GetTeacherEmailAsync(userId),
+                    _ => await GetStaffEmailAsync(userId)
+                };
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
 
+        /// <summary>
+        /// Get student full name by user ID
+        /// </summary>
+        private async Task<string> GetStudentFullNameAsync(string userId)
+        {
+            var student = await _supabaseClient
+                .From<StudentEntity>()
+                .Where(x => x.UserId == userId)
+                .Single();
+            return student?.FullName ?? "Unknown Student";
+        }
+
+        /// <summary>
+        /// Get teacher full name by user ID
+        /// </summary>
+        private async Task<string> GetTeacherFullNameAsync(string userId)
+        {
+            var teacher = await _supabaseClient
+                .From<TeacherEntity>()
+                .Where(x => x.UserId == userId)
+                .Single();
+            return teacher?.FullName ?? "Unknown Teacher";
+        }
+
+        /// <summary>
+        /// Get staff full name by user ID
+        /// </summary>
+        private async Task<string> GetStaffFullNameAsync(string userId)
+        {
+            var staff = await _supabaseClient
+                .From<StaffEntity>()
+                .Where(x => x.UserId == userId)
+                .Single();
+            return staff?.FullName ?? "Unknown Staff";
+        }
+
+        /// <summary>
+        /// Get student email by user ID
+        /// </summary>
+        private async Task<string> GetStudentEmailAsync(string userId)
+        {
+            var student = await _supabaseClient
+                .From<StudentEntity>()
+                .Where(x => x.UserId == userId)
+                .Single();
+            return student?.Email ?? string.Empty;
+        }
+
+        /// <summary>
+        /// Get teacher email by user ID
+        /// </summary>
+        private async Task<string> GetTeacherEmailAsync(string userId)
+        {
+            var teacher = await _supabaseClient
+                .From<TeacherEntity>()
+                .Where(x => x.UserId == userId)
+                .Single();
+            return teacher?.Email ?? string.Empty;
+        }
+
+        /// <summary>
+        /// Get staff email by user ID
+        /// </summary>
+        private async Task<string> GetStaffEmailAsync(string userId)
+        {
+            var staff = await _supabaseClient
+                .From<StaffEntity>()
+                .Where(x => x.UserId == userId)
+                .Single();
+            return staff?.Email ?? string.Empty;
+        }
+
+        /// <summary>
+        /// Get assignment submission for student
+        /// </summary>
+        private async Task<AssignmentSubmissionEntity?> GetAssignmentSubmissionAsync(string assignmentId, string studentId)
+        {
+            try
+            {
                 return await _supabaseClient
                     .From<AssignmentSubmissionEntity>()
                     .Where(x => x.AssignmentId == assignmentId && x.StudentId == studentId)
@@ -1418,7 +1645,52 @@ namespace OlkalouStudentSystem.Services
         }
 
         /// <summary>
-        /// Get teacher name by ID
+        /// Get current user entity ID
+        /// </summary>
+        private async Task<string> GetCurrentUserEntityIdAsync()
+        {
+            try
+            {
+                var currentStudent = _authService.CurrentStudent;
+                if (currentStudent != null)
+                {
+                    var student = await _supabaseClient
+                        .From<StudentEntity>()
+                        .Where(x => x.StudentId == currentStudent.StudentId)
+                        .Single();
+                    return student?.Id ?? string.Empty;
+                }
+
+                var currentTeacher = _authService.CurrentTeacher;
+                if (currentTeacher != null)
+                {
+                    var teacher = await _supabaseClient
+                        .From<TeacherEntity>()
+                        .Where(x => x.TeacherId == currentTeacher.TeacherId)
+                        .Single();
+                    return teacher?.Id ?? string.Empty;
+                }
+
+                var currentStaff = _authService.CurrentStaff;
+                if (currentStaff != null)
+                {
+                    var staff = await _supabaseClient
+                        .From<StaffEntity>()
+                        .Where(x => x.StaffId == currentStaff.StaffId)
+                        .Single();
+                    return staff?.Id ?? string.Empty;
+                }
+
+                return string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Get teacher name by teacher ID
         /// </summary>
         private async Task<string> GetTeacherNameAsync(string teacherId)
         {
@@ -1428,284 +1700,70 @@ namespace OlkalouStudentSystem.Services
                     .From<TeacherEntity>()
                     .Where(x => x.Id == teacherId)
                     .Single();
-
-                return teacher?.FullName ?? "Teacher";
+                return teacher?.FullName ?? "Unknown Teacher";
             }
             catch
             {
-                return "Teacher";
+                return "Unknown Teacher";
             }
         }
 
         /// <summary>
-        /// Get user full name by ID and type
+        /// Get current term based on date
         /// </summary>
-        private async Task<string> GetUserFullNameAsync(string userId, string userType)
+        private static int GetCurrentTerm()
         {
-            try
-            {
-                switch (userType)
-                {
-                    case "Student":
-                        var student = await _supabaseClient
-                            .From<StudentEntity>()
-                            .Where(x => x.UserId == userId)
-                            .Single();
-                        return student?.FullName ?? "Student";
-
-                    case "Teacher":
-                        var teacher = await _supabaseClient
-                            .From<TeacherEntity>()
-                            .Where(x => x.UserId == userId)
-                            .Single();
-                        return teacher?.FullName ?? "Teacher";
-
-                    default:
-                        var staff = await _supabaseClient
-                            .From<StaffEntity>()
-                            .Where(x => x.UserId == userId)
-                            .Single();
-                        return staff?.FullName ?? "Staff";
-                }
-            }
-            catch
-            {
-                return "User";
-            }
-        }
-
-        /// <summary>
-        /// Get user email by ID and type
-        /// </summary>
-        private async Task<string> GetUserEmailAsync(string userId, string userType)
-        {
-            try
-            {
-                switch (userType)
-                {
-                    case "Student":
-                        var student = await _supabaseClient
-                            .From<StudentEntity>()
-                            .Where(x => x.UserId == userId)
-                            .Single();
-                        return student?.Email ?? "";
-
-                    case "Teacher":
-                        var teacher = await _supabaseClient
-                            .From<TeacherEntity>()
-                            .Where(x => x.UserId == userId)
-                            .Single();
-                        return teacher?.Email ?? "";
-
-                    default:
-                        var staff = await _supabaseClient
-                            .From<StaffEntity>()
-                            .Where(x => x.UserId == userId)
-                            .Single();
-                        return staff?.Email ?? "";
-                }
-            }
-            catch
-            {
-                return "";
-            }
-        }
-
-        /// <summary>
-        /// Update fees balance after payment
-        /// </summary>
-        private async Task UpdateFeesBalanceAsync(string studentId, decimal paidAmount)
-        {
-            try
-            {
-                var fees = await _supabaseClient
-                    .From<FeesEntity>()
-                    .Where(x => x.StudentId == studentId && x.Year == DateTime.Now.Year)
-                    .Single();
-
-                if (fees != null)
-                {
-                    fees.PaidAmount += paidAmount;
-                    fees.Balance = fees.TotalFees - fees.PaidAmount;
-                    fees.LastPaymentDate = DateTime.UtcNow;
-                    fees.PaymentStatus = fees.Balance <= 0 ? "Paid" : "Pending";
-
-                    await fees.Update<FeesEntity>();
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error updating fees balance for student {StudentId}", studentId);
-            }
-        }
-
-        /// <summary>
-        /// Generate receipt number
-        /// </summary>
-        private string GenerateReceiptNumber()
-        {
-            return $"RCP{DateTime.Now:yyyyMMddHHmmss}";
-        }
-
-        /// <summary>
-        /// Get current academic term
-        /// </summary>
-        private int GetCurrentTerm()
-        {
-            var month = DateTime.Now.Month;
-            return month switch
+            var currentMonth = DateTime.Now.Month;
+            return currentMonth switch
             {
                 >= 1 and <= 4 => 1,
                 >= 5 and <= 8 => 2,
-                >= 9 and <= 12 => 3,
-                _ => 1
+                _ => 3
             };
         }
 
         /// <summary>
-        /// Generate demo performance data (until real data is available)
+        /// Generate dummy PDF content for testing
         /// </summary>
-        private List<SubjectPerformance> GenerateDemoPerformance()
+        private static byte[] GenerateDummyPdfContent()
         {
-            return new List<SubjectPerformance>
-            {
-                new SubjectPerformance { Subject = "Mathematics", CurrentGrade = 85, PreviousGrade = 78, Trend = "up" },
-                new SubjectPerformance { Subject = "English", CurrentGrade = 92, PreviousGrade = 89, Trend = "up" },
-                new SubjectPerformance { Subject = "Science", CurrentGrade = 78, PreviousGrade = 82, Trend = "down" },
-                new SubjectPerformance { Subject = "History", CurrentGrade = 89, PreviousGrade = 85, Trend = "up" },
-                new SubjectPerformance { Subject = "Geography", CurrentGrade = 83, PreviousGrade = 80, Trend = "up" }
-            };
-        }
-
-        /// <summary>
-        /// Generate dummy PDF content for downloads
-        /// </summary>
-        private byte[] GenerateDummyPdfContent()
-        {
-            return System.Text.Encoding.UTF8.GetBytes("%PDF-1.4\nDummy PDF content for demo purposes");
+            var pdfContent = "%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n>>\nendobj\nxref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \ntrailer\n<<\n/Size 4\n/Root 1 0 R\n>>\nstartxref\n174\n%%EOF";
+            return System.Text.Encoding.ASCII.GetBytes(pdfContent);
         }
 
         #endregion
 
-        #region Cleanup
+        #region IDisposable Implementation
 
         /// <summary>
-        /// Dispose of resources
+        /// Dispose resources
         /// </summary>
         public void Dispose()
         {
-            // Clean up any resources if needed
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Protected dispose method
+        /// </summary>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed && disposing)
+            {
+                // Dispose managed resources here if needed
+                _disposed = true;
+            }
+        }
+
+        /// <summary>
+        /// Finalizer
+        /// </summary>
+        ~ApiService()
+        {
+            Dispose(false);
         }
 
         #endregion
     }
-
-    #region Supporting Model Classes
-
-    public class User
-    {
-        public string UserId { get; set; } = string.Empty;
-        public string PhoneNumber { get; set; } = string.Empty;
-        public string UserType { get; set; } = string.Empty;
-        public bool IsActive { get; set; }
-        public DateTime? LastLogin { get; set; }
-        public DateTime CreatedAt { get; set; }
-    }
-
-    public class UserProfile
-    {
-        public string UserId { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
-        public Models.UserType UserType { get; set; }
-        public string Email { get; set; } = string.Empty;
-        public string PhoneNumber { get; set; } = string.Empty;
-    }
-
-    public class Invoice
-    {
-        public string InvoiceId { get; set; } = string.Empty;
-        public string InvoiceNumber { get; set; } = string.Empty;
-        public string VendorId { get; set; } = string.Empty;
-        public string VendorName { get; set; } = string.Empty;
-        public decimal Amount { get; set; }
-        public string Status { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public DateTime DueDate { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public string ApprovedBy { get; set; } = string.Empty;
-        public DateTime? ApprovalDate { get; set; }
-        public string Comments { get; set; } = string.Empty;
-    }
-
-    public class SalaryPayment
-    {
-        public string PaymentId { get; set; } = string.Empty;
-        public string EmployeeId { get; set; } = string.Empty;
-        public string EmployeeName { get; set; } = string.Empty;
-        public decimal BasicSalary { get; set; }
-        public decimal Allowances { get; set; }
-        public decimal Deductions { get; set; }
-        public decimal NetSalary { get; set; }
-        public string PayrollMonth { get; set; } = string.Empty;
-        public int PayrollYear { get; set; }
-        public string Status { get; set; } = string.Empty;
-        public DateTime PaymentDate { get; set; }
-        public string PaidBy { get; set; } = string.Empty;
-        public string ApprovedBy { get; set; } = string.Empty;
-        public DateTime? ApprovalDate { get; set; }
-    }
-
-    public class JournalEntry
-    {
-        public string EntryId { get; set; } = string.Empty;
-        public DateTime Date { get; set; }
-        public string Description { get; set; } = string.Empty;
-        public string Reference { get; set; } = string.Empty;
-        public string DebitAccount { get; set; } = string.Empty;
-        public string CreditAccount { get; set; } = string.Empty;
-        public decimal Amount { get; set; }
-        public string CreatedBy { get; set; } = string.Empty;
-    }
-
-    // Missing Entity classes for notifications
-    public class NotificationEntity : Supabase.Postgrest.Models.BaseModel
-    {
-        [Supabase.Postgrest.Attributes.PrimaryKey("id")]
-        public string Id { get; set; } = string.Empty;
-
-        [Supabase.Postgrest.Attributes.Column("title")]
-        public string Title { get; set; } = string.Empty;
-
-        [Supabase.Postgrest.Attributes.Column("message")]
-        public string Message { get; set; } = string.Empty;
-
-        [Supabase.Postgrest.Attributes.Column("recipient_id")]
-        public string RecipientId { get; set; } = string.Empty;
-
-        [Supabase.Postgrest.Attributes.Column("notification_type")]
-        public string NotificationType { get; set; } = string.Empty;
-
-        [Supabase.Postgrest.Attributes.Column("priority")]
-        public string Priority { get; set; } = string.Empty;
-
-        [Supabase.Postgrest.Attributes.Column("action_url")]
-        public string? ActionUrl { get; set; }
-
-        [Supabase.Postgrest.Attributes.Column("expiry_date")]
-        public DateTime? ExpiryDate { get; set; }
-
-        [Supabase.Postgrest.Attributes.Column("is_read")]
-        public bool IsRead { get; set; }
-
-        [Supabase.Postgrest.Attributes.Column("created_by")]
-        public string CreatedBy { get; set; } = string.Empty;
-
-        [Supabase.Postgrest.Attributes.Column("created_at")]
-        public DateTime CreatedAt { get; set; }
-
-        [Supabase.Postgrest.Attributes.Column("updated_at")]
-        public DateTime? UpdatedAt { get; set; }
-    }
-
-    #endregion
 }

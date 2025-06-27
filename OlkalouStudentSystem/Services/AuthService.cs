@@ -1,5 +1,5 @@
 ﻿// ===============================
-// Services/AuthService.cs - Updated with Supabase Integration
+// Services/AuthService.cs - Fixed with Supabase Integration
 // ===============================
 using OlkalouStudentSystem.Models;
 using OlkalouStudentSystem.Models.Data;
@@ -11,9 +11,12 @@ namespace OlkalouStudentSystem.Services
     {
         private readonly Supabase.Client _supabaseClient;
         private Student _currentStudent;
+        private Teacher _currentTeacher;
+        private Staff _currentStaff;
         private string _authToken;
         private string _refreshToken;
         private DateTime _tokenExpiry;
+        private string _currentUserType;
 
         // Events for authentication state changes
         public event EventHandler<AuthenticationStateChangedEventArgs> AuthenticationStateChanged;
@@ -22,13 +25,15 @@ namespace OlkalouStudentSystem.Services
         private const string AUTH_TOKEN_KEY = "auth_token";
         private const string REFRESH_TOKEN_KEY = "refresh_token";
         private const string STUDENT_DATA_KEY = "student_data";
+        private const string TEACHER_DATA_KEY = "teacher_data";
+        private const string STAFF_DATA_KEY = "staff_data";
         private const string TOKEN_EXPIRY_KEY = "token_expiry";
         private const string USER_ID_KEY = "user_id";
         private const string USER_TYPE_KEY = "user_type";
 
         public AuthService()
         {
-            _supabaseClient = SupabaseService.Instance;
+            _supabaseClient = SupabaseService.Instance.Client;
         }
 
         #region Public Properties
@@ -39,15 +44,30 @@ namespace OlkalouStudentSystem.Services
         public Student CurrentStudent => _currentStudent;
 
         /// <summary>
+        /// Gets the currently authenticated teacher
+        /// </summary>
+        public Teacher CurrentTeacher => _currentTeacher;
+
+        /// <summary>
+        /// Gets the currently authenticated staff
+        /// </summary>
+        public Staff CurrentStaff => _currentStaff;
+
+        /// <summary>
         /// Gets the current authentication token
         /// </summary>
         public string AuthToken => _authToken;
 
         /// <summary>
+        /// Gets the current user type
+        /// </summary>
+        public string CurrentUserType => _currentUserType;
+
+        /// <summary>
         /// Gets whether the user is currently authenticated
         /// </summary>
         public bool IsAuthenticated => !string.IsNullOrEmpty(_authToken) &&
-                                      _currentStudent != null &&
+                                      (_currentStudent != null || _currentTeacher != null || _currentStaff != null) &&
                                       DateTime.Now < _tokenExpiry;
 
         /// <summary>
@@ -59,7 +79,12 @@ namespace OlkalouStudentSystem.Services
         /// <summary>
         /// Gets the current user's role/permissions
         /// </summary>
-        public string UserRole => _currentStudent?.Form ?? "Student";
+        public string UserRole => _currentUserType switch
+        {
+            "Student" => _currentStudent?.Form ?? "Student",
+            "Teacher" => "Teacher",
+            _ => _currentStaff?.Position ?? "Staff"
+        };
 
         #endregion
 
@@ -105,38 +130,79 @@ namespace OlkalouStudentSystem.Services
                 userResponse.LastLogin = DateTime.UtcNow;
                 await userResponse.Update<UserEntity>();
 
-                // Get user profile based on user type
-                var student = await GetStudentProfileAsync(userResponse);
+                // Set current user type
+                _currentUserType = userResponse.UserType;
 
-                if (student == null)
+                // Get user profile based on user type
+                var loginResponse = new LoginResponse
                 {
-                    return new LoginResponse
-                    {
-                        Success = false,
-                        Message = "User profile not found",
-                        ErrorCode = "PROFILE_NOT_FOUND"
-                    };
+                    Success = true,
+                    Token = GenerateAuthToken(),
+                    UserType = userResponse.UserType,
+                    UserId = userResponse.Id,
+                    Message = "Login successful"
+                };
+
+                switch (userResponse.UserType)
+                {
+                    case "Student":
+                        var student = await GetStudentProfileAsync(userResponse);
+                        if (student == null)
+                        {
+                            return new LoginResponse
+                            {
+                                Success = false,
+                                Message = "Student profile not found",
+                                ErrorCode = "PROFILE_NOT_FOUND"
+                            };
+                        }
+                        _currentStudent = student;
+                        loginResponse.Student = student;
+                        break;
+
+                    case "Teacher":
+                        var teacher = await GetTeacherProfileAsync(userResponse);
+                        if (teacher == null)
+                        {
+                            return new LoginResponse
+                            {
+                                Success = false,
+                                Message = "Teacher profile not found",
+                                ErrorCode = "PROFILE_NOT_FOUND"
+                            };
+                        }
+                        _currentTeacher = teacher;
+                        loginResponse.Teacher = teacher;
+                        break;
+
+                    default:
+                        var staff = await GetStaffProfileAsync(userResponse);
+                        if (staff == null)
+                        {
+                            return new LoginResponse
+                            {
+                                Success = false,
+                                Message = "Staff profile not found",
+                                ErrorCode = "PROFILE_NOT_FOUND"
+                            };
+                        }
+                        _currentStaff = staff;
+                        loginResponse.Staff = staff;
+                        break;
                 }
 
                 // Store authentication data
-                _currentStudent = student;
-                _authToken = GenerateAuthToken();
+                _authToken = loginResponse.Token;
                 _refreshToken = GenerateRefreshToken();
                 _tokenExpiry = DateTime.Now.AddHours(24); // Token valid for 24 hours
 
                 // Persist authentication data securely
-                await SaveAuthenticationDataAsync();
+                await SaveAuthenticationDataAsync(userResponse.Id, userResponse.UserType);
 
                 // Notify authentication state change
-                OnAuthenticationStateChanged(true, _currentStudent);
+                OnAuthenticationStateChanged(true, _currentStudent, _currentTeacher, _currentStaff);
 
-                return new LoginResponse
-                {
-                    Success = true,
-                    Token = _authToken,
-                    Student = student,
-                    Message = "Login successful"
-                };
+                return loginResponse;
             }
             catch (Exception ex)
             {
@@ -159,81 +225,106 @@ namespace OlkalouStudentSystem.Services
         {
             try
             {
-                var student = new Student();
+                var studentEntity = await _supabaseClient
+                    .From<StudentEntity>()
+                    .Where(x => x.UserId == userEntity.Id)
+                    .Single();
 
-                switch (userEntity.UserType)
+                if (studentEntity != null)
                 {
-                    case "Student":
-                        var studentEntity = await _supabaseClient
-                            .From<StudentEntity>()
-                            .Where(x => x.UserId == userEntity.Id)
-                            .Single();
-
-                        if (studentEntity != null)
-                        {
-                            student = new Student
-                            {
-                                StudentId = studentEntity.StudentId,
-                                FullName = studentEntity.FullName,
-                                AdmissionNo = studentEntity.AdmissionNo,
-                                Form = studentEntity.Form,
-                                Class = studentEntity.Class,
-                                Email = studentEntity.Email,
-                                PhoneNumber = userEntity.PhoneNumber,
-                                DateOfBirth = studentEntity.DateOfBirth,
-                                Gender = studentEntity.Gender,
-                                Address = studentEntity.Address
-                            };
-                        }
-                        break;
-
-                    case "Teacher":
-                        var teacherEntity = await _supabaseClient
-                            .From<TeacherEntity>()
-                            .Where(x => x.UserId == userEntity.Id)
-                            .Single();
-
-                        if (teacherEntity != null)
-                        {
-                            student = new Student
-                            {
-                                StudentId = teacherEntity.TeacherId,
-                                FullName = teacherEntity.FullName,
-                                Form = "Teacher",
-                                Class = "Staff",
-                                PhoneNumber = userEntity.PhoneNumber
-                            };
-                        }
-                        break;
-
-                    case "Principal":
-                    case "DeputyPrincipal":
-                    case "Secretary":
-                    case "Bursar":
-                        var staffEntity = await _supabaseClient
-                            .From<StaffEntity>()
-                            .Where(x => x.UserId == userEntity.Id)
-                            .Single();
-
-                        if (staffEntity != null)
-                        {
-                            student = new Student
-                            {
-                                StudentId = staffEntity.StaffId,
-                                FullName = staffEntity.FullName,
-                                Form = staffEntity.Position,
-                                Class = "Staff",
-                                PhoneNumber = userEntity.PhoneNumber
-                            };
-                        }
-                        break;
+                    return new Student
+                    {
+                        StudentId = studentEntity.StudentId,
+                        FullName = studentEntity.FullName,
+                        AdmissionNo = studentEntity.AdmissionNo,
+                        Form = studentEntity.Form,
+                        Class = studentEntity.Class,
+                        Email = studentEntity.Email,
+                        PhoneNumber = userEntity.PhoneNumber,
+                        ParentPhone = studentEntity.ParentPhone,
+                        DateOfBirth = studentEntity.DateOfBirth,
+                        Gender = studentEntity.Gender,
+                        Address = studentEntity.Address
+                    };
                 }
 
-                return student;
+                return null;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Get student profile error: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Get teacher profile from Supabase based on user entity
+        /// </summary>
+        private async Task<Teacher> GetTeacherProfileAsync(UserEntity userEntity)
+        {
+            try
+            {
+                var teacherEntity = await _supabaseClient
+                    .From<TeacherEntity>()
+                    .Where(x => x.UserId == userEntity.Id)
+                    .Single();
+
+                if (teacherEntity != null)
+                {
+                    return new Teacher
+                    {
+                        TeacherId = teacherEntity.TeacherId,
+                        FullName = teacherEntity.FullName,
+                        Email = teacherEntity.Email,
+                        PhoneNumber = teacherEntity.PhoneNumber,
+                        EmployeeNumber = teacherEntity.EmployeeNumber,
+                        Department = teacherEntity.Department,
+                        QualifiedSubjects = teacherEntity.QualifiedSubjects ?? new List<string>(),
+                        DateJoined = teacherEntity.DateJoined
+                    };
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Get teacher profile error: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Get staff profile from Supabase based on user entity
+        /// </summary>
+        private async Task<Staff> GetStaffProfileAsync(UserEntity userEntity)
+        {
+            try
+            {
+                var staffEntity = await _supabaseClient
+                    .From<StaffEntity>()
+                    .Where(x => x.UserId == userEntity.Id)
+                    .Single();
+
+                if (staffEntity != null)
+                {
+                    return new Staff
+                    {
+                        StaffId = staffEntity.StaffId,
+                        FullName = staffEntity.FullName,
+                        Email = staffEntity.Email,
+                        PhoneNumber = staffEntity.PhoneNumber,
+                        EmployeeNumber = staffEntity.EmployeeNumber,
+                        Department = staffEntity.Department,
+                        Position = staffEntity.Position,
+                        DateJoined = staffEntity.DateJoined
+                    };
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Get staff profile error: {ex.Message}");
                 return null;
             }
         }
@@ -247,12 +338,17 @@ namespace OlkalouStudentSystem.Services
             {
                 var wasAuthenticated = IsAuthenticated;
                 var previousStudent = _currentStudent;
+                var previousTeacher = _currentTeacher;
+                var previousStaff = _currentStaff;
 
                 // Clear in-memory data
                 _currentStudent = null;
+                _currentTeacher = null;
+                _currentStaff = null;
                 _authToken = null;
                 _refreshToken = null;
                 _tokenExpiry = DateTime.MinValue;
+                _currentUserType = null;
 
                 // Clear persisted data
                 await ClearAuthenticationDataAsync();
@@ -260,7 +356,7 @@ namespace OlkalouStudentSystem.Services
                 // Notify authentication state change
                 if (wasAuthenticated)
                 {
-                    OnAuthenticationStateChanged(false, previousStudent);
+                    OnAuthenticationStateChanged(false, previousStudent, previousTeacher, previousStaff);
                 }
             }
             catch (Exception ex)
@@ -294,15 +390,15 @@ namespace OlkalouStudentSystem.Services
             {
                 // Retrieve stored authentication data
                 var authToken = await SecureStorage.GetAsync(AUTH_TOKEN_KEY);
-                var studentDataJson = await SecureStorage.GetAsync(STUDENT_DATA_KEY);
                 var tokenExpiryString = await SecureStorage.GetAsync(TOKEN_EXPIRY_KEY);
                 var userId = await SecureStorage.GetAsync(USER_ID_KEY);
+                var userType = await SecureStorage.GetAsync(USER_TYPE_KEY);
 
                 // Validate that all required data is present
                 if (string.IsNullOrEmpty(authToken) ||
-                    string.IsNullOrEmpty(studentDataJson) ||
                     string.IsNullOrEmpty(tokenExpiryString) ||
-                    string.IsNullOrEmpty(userId))
+                    string.IsNullOrEmpty(userId) ||
+                    string.IsNullOrEmpty(userType))
                 {
                     return false;
                 }
@@ -339,22 +435,43 @@ namespace OlkalouStudentSystem.Services
                     return false;
                 }
 
-                // Deserialize student data
-                var student = JsonSerializer.Deserialize<Student>(studentDataJson);
-                if (student == null)
+                // Restore user profile based on type
+                _currentUserType = userType;
+
+                switch (userType)
                 {
-                    await ClearAuthenticationDataAsync();
-                    return false;
+                    case "Student":
+                        var studentDataJson = await SecureStorage.GetAsync(STUDENT_DATA_KEY);
+                        if (!string.IsNullOrEmpty(studentDataJson))
+                        {
+                            _currentStudent = JsonSerializer.Deserialize<Student>(studentDataJson);
+                        }
+                        break;
+
+                    case "Teacher":
+                        var teacherDataJson = await SecureStorage.GetAsync(TEACHER_DATA_KEY);
+                        if (!string.IsNullOrEmpty(teacherDataJson))
+                        {
+                            _currentTeacher = JsonSerializer.Deserialize<Teacher>(teacherDataJson);
+                        }
+                        break;
+
+                    default:
+                        var staffDataJson = await SecureStorage.GetAsync(STAFF_DATA_KEY);
+                        if (!string.IsNullOrEmpty(staffDataJson))
+                        {
+                            _currentStaff = JsonSerializer.Deserialize<Staff>(staffDataJson);
+                        }
+                        break;
                 }
 
                 // Restore authentication state
                 _authToken = authToken;
-                _currentStudent = student;
                 _tokenExpiry = tokenExpiry;
                 _refreshToken = await SecureStorage.GetAsync(REFRESH_TOKEN_KEY);
 
                 // Notify authentication state change
-                OnAuthenticationStateChanged(true, _currentStudent);
+                OnAuthenticationStateChanged(true, _currentStudent, _currentTeacher, _currentStaff);
 
                 return true;
             }
@@ -398,183 +515,46 @@ namespace OlkalouStudentSystem.Services
 
         #endregion
 
-        #region User Management
-
-        /// <summary>
-        /// Update current student information
-        /// </summary>
-        /// <param name="updatedStudent">Updated student data</param>
-        public async Task UpdateStudentInfoAsync(Student updatedStudent)
-        {
-            if (updatedStudent == null)
-                throw new ArgumentNullException(nameof(updatedStudent));
-
-            if (!IsAuthenticated)
-                throw new InvalidOperationException("User must be authenticated to update student info");
-
-            try
-            {
-                _currentStudent = updatedStudent;
-                await SaveStudentDataAsync();
-
-                // Notify of authentication state change (user data updated)
-                OnAuthenticationStateChanged(true, _currentStudent);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Update student info error: {ex.Message}");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Change user password
-        /// </summary>
-        /// <param name="currentPassword">Current password</param>
-        /// <param name="newPassword">New password</param>
-        /// <returns>True if password was changed successfully</returns>
-        public async Task<bool> ChangePasswordAsync(string currentPassword, string newPassword)
-        {
-            try
-            {
-                if (!IsAuthenticated)
-                    throw new InvalidOperationException("User must be authenticated to change password");
-
-                if (string.IsNullOrWhiteSpace(currentPassword))
-                    throw new ArgumentException("Current password is required", nameof(currentPassword));
-
-                if (string.IsNullOrWhiteSpace(newPassword))
-                    throw new ArgumentException("New password is required", nameof(newPassword));
-
-                if (newPassword.Length < 5)
-                    throw new ArgumentException("New password must be at least 5 characters long", nameof(newPassword));
-
-                // Get current user ID from storage
-                var userId = await SecureStorage.GetAsync(USER_ID_KEY);
-                if (string.IsNullOrEmpty(userId))
-                    return false;
-
-                // Verify current password
-                var userEntity = await _supabaseClient
-                    .From<UserEntity>()
-                    .Where(x => x.Id == userId && x.Password == currentPassword)
-                    .Single();
-
-                if (userEntity == null)
-                    return false; // Current password is incorrect
-
-                // Update password
-                userEntity.Password = newPassword;
-                await userEntity.Update<UserEntity>();
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Change password error: {ex.Message}");
-                return false;
-            }
-        }
-
-        #endregion
-
-        #region Authorization
-
-        /// <summary>
-        /// Check if user has permission to access a specific resource
-        /// </summary>
-        /// <param name="permission">Permission to check</param>
-        /// <returns>True if user has the permission</returns>
-        public bool HasPermission(string permission)
-        {
-            if (!IsAuthenticated)
-                return false;
-
-            // For student app, most permissions are granted by default
-            return permission switch
-            {
-                "view_assignments" => true,
-                "submit_assignments" => true,
-                "view_fees" => true,
-                "make_payments" => true,
-                "view_library" => true,
-                "borrow_books" => true,
-                "view_activities" => true,
-                "join_activities" => true,
-                "admin_access" => _currentStudent?.Form?.Contains("Principal") == true || _currentStudent?.Form?.Contains("Secretary") == true,
-                _ => true
-            };
-        }
-
-        /// <summary>
-        /// Get authentication header for API requests
-        /// </summary>
-        /// <returns>Authorization header value</returns>
-        public string GetAuthorizationHeader()
-        {
-            if (!IsAuthenticated)
-                throw new InvalidOperationException("User is not authenticated");
-
-            return $"Bearer {_authToken}";
-        }
-
-        #endregion
-
         #region Private Methods
 
         /// <summary>
         /// Save authentication data to secure storage
         /// </summary>
-        private async Task SaveAuthenticationDataAsync()
+        private async Task SaveAuthenticationDataAsync(string userId, string userType)
         {
             try
             {
                 await SecureStorage.SetAsync(AUTH_TOKEN_KEY, _authToken ?? "");
                 await SecureStorage.SetAsync(REFRESH_TOKEN_KEY, _refreshToken ?? "");
                 await SecureStorage.SetAsync(TOKEN_EXPIRY_KEY, _tokenExpiry.ToString());
+                await SecureStorage.SetAsync(USER_ID_KEY, userId);
+                await SecureStorage.SetAsync(USER_TYPE_KEY, userType);
 
-                // Store user ID for verification
-                var userId = await SecureStorage.GetAsync(USER_ID_KEY);
-                if (string.IsNullOrEmpty(userId) && _currentStudent != null)
+                // Save user data based on type
+                switch (userType)
                 {
-                    // Get user ID from Supabase based on phone number
-                    var userEntity = await _supabaseClient
-                        .From<UserEntity>()
-                        .Where(x => x.PhoneNumber == NormalizePhoneNumber(_currentStudent.PhoneNumber))
-                        .Single();
+                    case "Student" when _currentStudent != null:
+                        var studentJson = JsonSerializer.Serialize(_currentStudent);
+                        await SecureStorage.SetAsync(STUDENT_DATA_KEY, studentJson);
+                        break;
 
-                    if (userEntity != null)
-                    {
-                        await SecureStorage.SetAsync(USER_ID_KEY, userEntity.Id);
-                        await SecureStorage.SetAsync(USER_TYPE_KEY, userEntity.UserType);
-                    }
+                    case "Teacher" when _currentTeacher != null:
+                        var teacherJson = JsonSerializer.Serialize(_currentTeacher);
+                        await SecureStorage.SetAsync(TEACHER_DATA_KEY, teacherJson);
+                        break;
+
+                    default:
+                        if (_currentStaff != null)
+                        {
+                            var staffJson = JsonSerializer.Serialize(_currentStaff);
+                            await SecureStorage.SetAsync(STAFF_DATA_KEY, staffJson);
+                        }
+                        break;
                 }
-
-                await SaveStudentDataAsync();
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Save authentication data error: {ex.Message}");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Save student data to secure storage
-        /// </summary>
-        private async Task SaveStudentDataAsync()
-        {
-            try
-            {
-                if (_currentStudent != null)
-                {
-                    var studentJson = JsonSerializer.Serialize(_currentStudent);
-                    await SecureStorage.SetAsync(STUDENT_DATA_KEY, studentJson);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Save student data error: {ex.Message}");
                 throw;
             }
         }
@@ -589,6 +569,8 @@ namespace OlkalouStudentSystem.Services
                 SecureStorage.Remove(AUTH_TOKEN_KEY);
                 SecureStorage.Remove(REFRESH_TOKEN_KEY);
                 SecureStorage.Remove(STUDENT_DATA_KEY);
+                SecureStorage.Remove(TEACHER_DATA_KEY);
+                SecureStorage.Remove(STAFF_DATA_KEY);
                 SecureStorage.Remove(TOKEN_EXPIRY_KEY);
                 SecureStorage.Remove(USER_ID_KEY);
                 SecureStorage.Remove(USER_TYPE_KEY);
@@ -659,9 +641,7 @@ namespace OlkalouStudentSystem.Services
         /// <summary>
         /// Notify subscribers of authentication state changes
         /// </summary>
-        /// <param name="isAuthenticated">Whether user is authenticated</param>
-        /// <param name="student">Current student (null if logged out)</param>
-        private void OnAuthenticationStateChanged(bool isAuthenticated, Student student)
+        private void OnAuthenticationStateChanged(bool isAuthenticated, Student student, Teacher teacher, Staff staff)
         {
             try
             {
@@ -669,6 +649,8 @@ namespace OlkalouStudentSystem.Services
                 {
                     IsAuthenticated = isAuthenticated,
                     Student = student,
+                    Teacher = teacher,
+                    Staff = staff,
                     Timestamp = DateTime.Now
                 });
             }
@@ -677,6 +659,48 @@ namespace OlkalouStudentSystem.Services
                 System.Diagnostics.Debug.WriteLine($"Authentication state change notification error: {ex.Message}");
                 // Don't throw - notification failures shouldn't break authentication
             }
+        }
+
+        #endregion
+
+        #region Authorization
+
+        /// <summary>
+        /// Check if user has permission to access a specific resource
+        /// </summary>
+        /// <param name="permission">Permission to check</param>
+        /// <returns>True if user has the permission</returns>
+        public bool HasPermission(string permission)
+        {
+            if (!IsAuthenticated)
+                return false;
+
+            return permission switch
+            {
+                "view_assignments" => true,
+                "submit_assignments" => _currentUserType == "Student",
+                "create_assignments" => _currentUserType == "Teacher",
+                "view_fees" => true,
+                "make_payments" => _currentUserType == "Student",
+                "view_library" => true,
+                "borrow_books" => _currentUserType == "Student",
+                "view_activities" => true,
+                "join_activities" => _currentUserType == "Student",
+                "admin_access" => _currentUserType != "Student",
+                _ => true
+            };
+        }
+
+        /// <summary>
+        /// Get authentication header for API requests
+        /// </summary>
+        /// <returns>Authorization header value</returns>
+        public string GetAuthorizationHeader()
+        {
+            if (!IsAuthenticated)
+                throw new InvalidOperationException("User is not authenticated");
+
+            return $"Bearer {_authToken}";
         }
 
         #endregion
@@ -720,6 +744,8 @@ namespace OlkalouStudentSystem.Services
     {
         public bool IsAuthenticated { get; set; }
         public Student Student { get; set; }
+        public Teacher Teacher { get; set; }
+        public Staff Staff { get; set; }
         public DateTime Timestamp { get; set; }
     }
 

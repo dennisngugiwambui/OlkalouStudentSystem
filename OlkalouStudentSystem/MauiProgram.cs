@@ -7,7 +7,6 @@ using OlkalouStudentSystem.Services;
 using OlkalouStudentSystem.ViewModels;
 using OlkalouStudentSystem.Views;
 using OlkalouStudentSystem.Models.Data;
-using OlkalouStudentSystem.Data;
 
 namespace OlkalouStudentSystem;
 
@@ -28,7 +27,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<AuthService>();
         builder.Services.AddSingleton<ApiService>();
         builder.Services.AddSingleton<FileService>();
-        builder.Services.AddSingleton<DatabaseInitializer>();
+        builder.Services.AddSingleton<DbInitializer>();
 
         // Register Data Services (Singletons)
         builder.Services.AddSingleton<UserRegistrationService>();

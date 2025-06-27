@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Supabase;
 using Supabase.Gotrue.Interfaces;
 using Supabase.Gotrue;
+using Supabase.Realtime;
 using System.Collections.Concurrent;
 
 namespace OlkalouStudentSystem.Services
@@ -59,7 +60,20 @@ namespace OlkalouStudentSystem.Services
         /// <summary>
         /// Gets a value indicating whether the client is connected
         /// </summary>
-        public bool IsConnected => _client?.Realtime?.IsConnected ?? false;
+        public bool IsConnected
+        {
+            get
+            {
+                try
+                {
+                    return _client?.Realtime?.Socket?.IsConnected ?? false;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+        }
 
         #endregion
 
@@ -97,12 +111,15 @@ namespace OlkalouStudentSystem.Services
             var url = supabaseConfig["Url"] ?? throw new InvalidOperationException("Supabase URL not found in configuration");
             var key = supabaseConfig["Key"] ?? throw new InvalidOperationException("Supabase Key not found in configuration");
 
+            // Parse configuration values manually
+            var autoConnectRealtime = bool.TryParse(supabaseConfig["AutoConnectRealtime"], out var acr) ? acr : true;
+            var autoRefreshToken = bool.TryParse(supabaseConfig["AutoRefreshToken"], out var art) ? art : true;
+
             var options = new SupabaseOptions
             {
-                AutoConnectRealtime = supabaseConfig.GetValue<bool>("AutoConnectRealtime", true),
-                AutoRefreshToken = supabaseConfig.GetValue<bool>("AutoRefreshToken", true),
-                SessionHandler = new SupabaseSessionHandler(),
-                SessionPersistor = new SupabaseSessionPersistor()
+                AutoConnectRealtime = autoConnectRealtime,
+                AutoRefreshToken = autoRefreshToken,
+                SessionHandler = new SupabaseSessionHandler()
             };
 
             await InitializeAsync(url, key, options);
@@ -185,7 +202,7 @@ namespace OlkalouStudentSystem.Services
         /// </summary>
         public async Task<bool> ReconnectAsync()
         {
-            if (_client?.Realtime != null && !_client.Realtime.IsConnected)
+            if (_client?.Realtime != null && !IsConnected)
             {
                 try
                 {
@@ -228,7 +245,11 @@ namespace OlkalouStudentSystem.Services
 
             if (expiration.HasValue)
             {
-                _ = Task.Delay(expiration.Value).ContinueWith(_ => _cache.TryRemove(key, out _));
+                // Fix the lambda to remove the cache entry correctly
+                _ = Task.Delay(expiration.Value).ContinueWith(_ =>
+                {
+                    _cache.TryRemove(key, out object? _);
+                }, TaskScheduler.Default);
             }
         }
 
@@ -253,8 +274,7 @@ namespace OlkalouStudentSystem.Services
             {
                 AutoConnectRealtime = true,
                 AutoRefreshToken = true,
-                SessionHandler = new SupabaseSessionHandler(),
-                SessionPersistor = new SupabaseSessionPersistor()
+                SessionHandler = new SupabaseSessionHandler()
             };
         }
 
@@ -263,11 +283,15 @@ namespace OlkalouStudentSystem.Services
         /// </summary>
         private async Task DisposeClientAsync()
         {
-            if (_client?.Realtime != null && _client.Realtime.IsConnected)
+            if (_client?.Realtime != null && IsConnected)
             {
                 try
                 {
-                    await _client.Realtime.DisconnectAsync();
+                    // Use Disconnect() instead of DisconnectAsync() as it doesn't exist in current version
+                    _client.Realtime.Disconnect();
+
+                    // Give it a moment to disconnect gracefully
+                    await Task.Delay(100);
                 }
                 catch (Exception ex)
                 {
@@ -288,6 +312,8 @@ namespace OlkalouStudentSystem.Services
         /// </summary>
         public async Task<HealthCheckResult> HealthCheckAsync()
         {
+            var startTime = DateTime.UtcNow;
+
             try
             {
                 if (!IsInitialized)
@@ -296,28 +322,34 @@ namespace OlkalouStudentSystem.Services
                     {
                         IsHealthy = false,
                         Status = "Not Initialized",
-                        Message = "SupabaseService has not been initialized"
+                        Message = "SupabaseService has not been initialized",
+                        ResponseTime = startTime,
+                        Duration = DateTime.UtcNow - startTime
                     };
                 }
 
                 var isConnected = await TestConnectionAsync();
+                var endTime = DateTime.UtcNow;
 
                 return new HealthCheckResult
                 {
                     IsHealthy = isConnected,
                     Status = isConnected ? "Healthy" : "Unhealthy",
                     Message = isConnected ? "Connection successful" : "Connection failed",
-                    ResponseTime = DateTime.UtcNow
+                    ResponseTime = startTime,
+                    Duration = endTime - startTime
                 };
             }
             catch (Exception ex)
             {
+                var endTime = DateTime.UtcNow;
                 return new HealthCheckResult
                 {
                     IsHealthy = false,
                     Status = "Error",
                     Message = ex.Message,
-                    ResponseTime = DateTime.UtcNow
+                    ResponseTime = startTime,
+                    Duration = endTime - startTime
                 };
             }
         }
@@ -398,50 +430,7 @@ namespace OlkalouStudentSystem.Services
     /// </summary>
     public class SupabaseSessionHandler : IGotrueSessionPersistence<Session>
     {
-        public void DestroySession()
-        {
-            // Implementation for destroying session
-            Preferences.Remove("supabase_session");
-        }
-
-        public Session? LoadSession()
-        {
-            // Implementation for loading session
-            var sessionJson = Preferences.Get("supabase_session", string.Empty);
-            if (string.IsNullOrEmpty(sessionJson))
-                return null;
-
-            try
-            {
-                return System.Text.Json.JsonSerializer.Deserialize<Session>(sessionJson);
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        public void SaveSession(Session session)
-        {
-            // Implementation for saving session
-            try
-            {
-                var sessionJson = System.Text.Json.JsonSerializer.Serialize(session);
-                Preferences.Set("supabase_session", sessionJson);
-            }
-            catch
-            {
-                // Handle serialization error
-            }
-        }
-    }
-
-    /// <summary>
-    /// Custom session persistor for Supabase
-    /// </summary>
-    public class SupabaseSessionPersistor : IGotrueSessionPersistence<Session>
-    {
-        private const string SessionKey = "supabase_user_session";
+        private const string SessionKey = "supabase_auth_session";
 
         public void DestroySession()
         {
@@ -462,11 +451,17 @@ namespace OlkalouStudentSystem.Services
         {
             try
             {
-                var sessionData = Preferences.Get(SessionKey, string.Empty);
-                if (string.IsNullOrWhiteSpace(sessionData))
+                var sessionJson = Preferences.Get(SessionKey, string.Empty);
+                if (string.IsNullOrEmpty(sessionJson))
                     return null;
 
-                return System.Text.Json.JsonSerializer.Deserialize<Session>(sessionData);
+                var options = new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                    PropertyNameCaseInsensitive = true
+                };
+
+                return System.Text.Json.JsonSerializer.Deserialize<Session>(sessionJson, options);
             }
             catch (Exception ex)
             {
@@ -479,12 +474,183 @@ namespace OlkalouStudentSystem.Services
         {
             try
             {
-                var sessionData = System.Text.Json.JsonSerializer.Serialize(session);
+                var options = new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                    WriteIndented = false
+                };
+
+                var sessionJson = System.Text.Json.JsonSerializer.Serialize(session, options);
+                Preferences.Set(SessionKey, sessionJson);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error saving session: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Custom session persistor for Supabase (alternative implementation)
+    /// </summary>
+    public class SupabaseSessionPersistor : IGotrueSessionPersistence<Session>
+    {
+        private const string SessionKey = "supabase_user_session_v2";
+
+        public void DestroySession()
+        {
+            try
+            {
+                if (Preferences.ContainsKey(SessionKey))
+                {
+                    Preferences.Remove(SessionKey);
+                }
+
+                // Also clear any legacy session keys
+                var legacyKeys = new[] { "supabase_user_session", "supabase_session", "supabase_auth_session" };
+                foreach (var key in legacyKeys)
+                {
+                    if (Preferences.ContainsKey(key))
+                    {
+                        Preferences.Remove(key);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error destroying session: {ex.Message}");
+            }
+        }
+
+        public Session? LoadSession()
+        {
+            try
+            {
+                var sessionData = Preferences.Get(SessionKey, string.Empty);
+                if (string.IsNullOrWhiteSpace(sessionData))
+                    return null;
+
+                var options = new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                    PropertyNameCaseInsensitive = true,
+                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+                };
+
+                return System.Text.Json.JsonSerializer.Deserialize<Session>(sessionData, options);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading session: {ex.Message}");
+
+                // If loading fails, try to clear corrupted session data
+                try
+                {
+                    DestroySession();
+                }
+                catch
+                {
+                    // Ignore cleanup errors
+                }
+
+                return null;
+            }
+        }
+
+        public void SaveSession(Session session)
+        {
+            if (session == null)
+            {
+                DestroySession();
+                return;
+            }
+
+            try
+            {
+                var options = new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                    WriteIndented = false,
+                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+                };
+
+                var sessionData = System.Text.Json.JsonSerializer.Serialize(session, options);
                 Preferences.Set(SessionKey, sessionData);
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error saving session: {ex.Message}");
+            }
+        }
+    }
+
+    #endregion
+
+    #region Extension Methods
+
+    /// <summary>
+    /// Extension methods for SupabaseService
+    /// </summary>
+    public static class SupabaseServiceExtensions
+    {
+        /// <summary>
+        /// Initialize SupabaseService with retry logic
+        /// </summary>
+        public static async Task<bool> TryInitializeAsync(this SupabaseService service, int maxRetries = 3, TimeSpan? delay = null)
+        {
+            var retryDelay = delay ?? TimeSpan.FromSeconds(2);
+
+            for (int i = 0; i < maxRetries; i++)
+            {
+                try
+                {
+                    await service.InitializeAsync();
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Initialization attempt {i + 1} failed: {ex.Message}");
+
+                    if (i < maxRetries - 1)
+                    {
+                        await Task.Delay(retryDelay);
+                        retryDelay = TimeSpan.FromMilliseconds(retryDelay.TotalMilliseconds * 1.5); // Exponential backoff
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Get configuration value with fallback
+        /// </summary>
+        public static T GetValueOrDefault<T>(this IConfiguration configuration, string key, T defaultValue)
+        {
+            try
+            {
+                var value = configuration[key];
+                if (string.IsNullOrWhiteSpace(value))
+                    return defaultValue;
+
+                if (typeof(T) == typeof(bool))
+                {
+                    return (T)(object)bool.Parse(value);
+                }
+                else if (typeof(T) == typeof(int))
+                {
+                    return (T)(object)int.Parse(value);
+                }
+                else if (typeof(T) == typeof(string))
+                {
+                    return (T)(object)value;
+                }
+
+                return defaultValue;
+            }
+            catch
+            {
+                return defaultValue;
             }
         }
     }

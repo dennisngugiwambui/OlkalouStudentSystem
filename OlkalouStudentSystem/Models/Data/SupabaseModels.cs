@@ -1,5 +1,5 @@
 ﻿// ===============================
-// Models/Data/SupabaseModels.cs - Enhanced Entity Models for Supabase
+// Models/Data/SupabaseModels.cs - Updated Entity Models with Missing Properties
 // ===============================
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
@@ -9,7 +9,247 @@ using Supabase.Postgrest.Models;
 
 namespace OlkalouStudentSystem.Models.Data
 {
-    #region Base Models
+    #region Teacher Models
+
+    /// <summary>
+    /// Teacher Entity - Updated with missing properties
+    /// </summary>
+    [Table("teachers")]
+    public class TeacherEntity : BaseSupabaseModel
+    {
+        [PrimaryKey("id", false)]
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+
+        [Column("user_id")]
+        [Required]
+        public string UserId { get; set; } = string.Empty;
+
+        [Column("teacher_id")]
+        [Required]
+        [StringLength(50)]
+        public string TeacherId { get; set; } = string.Empty;
+
+        [Column("employee_number")] // Added missing property
+        [StringLength(50)]
+        public string EmployeeNumber { get; set; } = string.Empty;
+
+        [Column("full_name")]
+        [Required]
+        [StringLength(255, MinimumLength = 2)]
+        public string FullName { get; set; } = string.Empty;
+
+        [Column("employee_type")]
+        [Required]
+        [StringLength(50)]
+        public string EmployeeType { get; set; } = string.Empty;
+
+        [Column("tsc_number")]
+        [StringLength(50)]
+        public string? TscNumber { get; set; }
+
+        [Column("ntsc_payment")]
+        [Range(0, double.MaxValue, ErrorMessage = "NTSC payment must be positive")]
+        public decimal? NtscPayment { get; set; }
+
+        [Column("subjects")]
+        [JsonConverter(typeof(JsonStringArrayConverter))]
+        public List<string> Subjects { get; set; } = new();
+
+        [Column("qualified_subjects")] // Added missing property
+        [JsonConverter(typeof(JsonStringArrayConverter))]
+        public List<string> QualifiedSubjects { get; set; } = new();
+
+        [Column("assigned_forms")]
+        [JsonConverter(typeof(JsonStringArrayConverter))]
+        public List<string> AssignedForms { get; set; } = new();
+
+        [Column("qualification")]
+        [StringLength(500)]
+        public string? Qualification { get; set; }
+
+        [Column("experience_years")]
+        [Range(0, 50, ErrorMessage = "Experience years must be between 0 and 50")]
+        public int? ExperienceYears { get; set; }
+
+        [Column("employment_date")]
+        public DateTime? EmploymentDate { get; set; }
+
+        [Column("date_joined")] // Added missing property
+        public DateTime DateJoined { get; set; } = DateTime.UtcNow;
+
+        [Column("department")]
+        [StringLength(100)]
+        public string? Department { get; set; }
+
+        [Column("is_class_teacher")]
+        public bool IsClassTeacher { get; set; } = false;
+
+        [Column("class_teacher_for")]
+        [StringLength(50)]
+        public string? ClassTeacherFor { get; set; }
+
+        [Column("is_active")]
+        public bool IsActive { get; set; } = true;
+
+        [Column("profile_picture_url")]
+        [Url]
+        public string? ProfilePictureUrl { get; set; }
+
+        [Column("performance_rating")]
+        [Range(1, 5, ErrorMessage = "Performance rating must be between 1 and 5")]
+        public decimal? PerformanceRating { get; set; }
+
+        [Column("email")]
+        [EmailAddress]
+        [StringLength(255)]
+        public string? Email { get; set; }
+
+        [Column("phone_number")]
+        [Phone]
+        [StringLength(15)]
+        public string? PhoneNumber { get; set; }
+
+        [Column("national_id")]
+        [StringLength(20)]
+        public string? NationalId { get; set; }
+
+        [Column("bank_account")]
+        [StringLength(50)]
+        public string? BankAccount { get; set; }
+
+        [Column("monthly_salary")]
+        [Range(0, double.MaxValue)]
+        public decimal? MonthlySalary { get; set; }
+
+        public override ValidationResult Validate()
+        {
+            var result = base.Validate();
+
+            // Validate employee type
+            var validEmployeeTypes = new[] { "BOM", "NTSC", "Contract", "Volunteer" };
+            if (!validEmployeeTypes.Contains(EmployeeType))
+            {
+                result.Errors.Add("Invalid employee type");
+                result.IsValid = false;
+            }
+
+            // TSC number required for NTSC employees
+            if (EmployeeType == "NTSC" && string.IsNullOrWhiteSpace(TscNumber))
+            {
+                result.Errors.Add("TSC number is required for NTSC employees");
+                result.IsValid = false;
+            }
+
+            return result;
+        }
+    }
+
+    #endregion
+
+    #region Staff Models
+
+    /// <summary>
+    /// Staff Entity - Updated with missing properties
+    /// </summary>
+    [Table("staff")]
+    public class StaffEntity : BaseSupabaseModel
+    {
+        [PrimaryKey("id", false)]
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+
+        [Column("user_id")]
+        [Required]
+        public string UserId { get; set; } = string.Empty;
+
+        [Column("staff_id")]
+        [Required]
+        [StringLength(50)]
+        public string StaffId { get; set; } = string.Empty;
+
+        [Column("employee_number")] // Added missing property
+        [StringLength(50)]
+        public string EmployeeNumber { get; set; } = string.Empty;
+
+        [Column("full_name")]
+        [Required]
+        [StringLength(255, MinimumLength = 2)]
+        public string FullName { get; set; } = string.Empty;
+
+        [Column("position")]
+        [Required]
+        [StringLength(100)]
+        public string Position { get; set; } = string.Empty;
+
+        [Column("department")]
+        [StringLength(100)]
+        public string? Department { get; set; }
+
+        [Column("employment_date")]
+        public DateTime? EmploymentDate { get; set; }
+
+        [Column("date_joined")] // Added missing property
+        public DateTime DateJoined { get; set; } = DateTime.UtcNow;
+
+        [Column("qualification")]
+        [StringLength(500)]
+        public string? Qualification { get; set; }
+
+        [Column("salary")]
+        [Range(0, double.MaxValue)]
+        public decimal? Salary { get; set; }
+
+        [Column("office_location")]
+        [StringLength(100)]
+        public string? OfficeLocation { get; set; }
+
+        [Column("is_active")]
+        public bool IsActive { get; set; } = true;
+
+        [Column("profile_picture_url")]
+        [Url]
+        public string? ProfilePictureUrl { get; set; }
+
+        [Column("permissions")]
+        [JsonConverter(typeof(JsonStringArrayConverter))]
+        public List<string> Permissions { get; set; } = new();
+
+        [Column("email")]
+        [EmailAddress]
+        [StringLength(255)]
+        public string? Email { get; set; }
+
+        [Column("phone_number")]
+        [Phone]
+        [StringLength(15)]
+        public string? PhoneNumber { get; set; }
+
+        [Column("national_id")]
+        [StringLength(20)]
+        public string? NationalId { get; set; }
+
+        [Column("bank_account")]
+        [StringLength(50)]
+        public string? BankAccount { get; set; }
+
+        public override ValidationResult Validate()
+        {
+            var result = base.Validate();
+
+            // Validate position
+            var validPositions = new[] { "Principal", "DeputyPrincipal", "Secretary", "Bursar", "Librarian", "LabTechnician", "ComputerLabTechnician", "Cook", "Gardener", "BoardingMaster" };
+            if (!validPositions.Contains(Position))
+            {
+                result.Errors.Add("Invalid staff position");
+                result.IsValid = false;
+            }
+
+            return result;
+        }
+    }
+
+    #endregion
+
+    #region Base Models (Updated)
 
     /// <summary>
     /// Base model for all Supabase entities with common audit fields
@@ -336,228 +576,6 @@ namespace OlkalouStudentSystem.Models.Data
             var validClasses = new[] { "A", "B", "C", "S", "N" };
 
             return validForms.Contains(form) && validClasses.Contains(classCode);
-        }
-    }
-
-    #endregion
-
-    #region Teacher Models
-
-    /// <summary>
-    /// Teacher Entity
-    /// </summary>
-    [Table("teachers")]
-    public class TeacherEntity : BaseSupabaseModel
-    {
-        [PrimaryKey("id", false)]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        [Column("user_id")]
-        [Required]
-        public string UserId { get; set; } = string.Empty;
-
-        [Column("teacher_id")]
-        [Required]
-        [StringLength(50)]
-        public string TeacherId { get; set; } = string.Empty;
-
-        [Column("full_name")]
-        [Required]
-        [StringLength(255, MinimumLength = 2)]
-        public string FullName { get; set; } = string.Empty;
-
-        [Column("employee_type")]
-        [Required]
-        [StringLength(50)]
-        public string EmployeeType { get; set; } = string.Empty;
-
-        [Column("tsc_number")]
-        [StringLength(50)]
-        public string? TscNumber { get; set; }
-
-        [Column("ntsc_payment")]
-        [Range(0, double.MaxValue, ErrorMessage = "NTSC payment must be positive")]
-        public decimal? NtscPayment { get; set; }
-
-        [Column("subjects")]
-        [JsonConverter(typeof(JsonStringArrayConverter))]
-        public List<string> Subjects { get; set; } = new();
-
-        [Column("assigned_forms")]
-        [JsonConverter(typeof(JsonStringArrayConverter))]
-        public List<string> AssignedForms { get; set; } = new();
-
-        [Column("qualification")]
-        [StringLength(500)]
-        public string? Qualification { get; set; }
-
-        [Column("experience_years")]
-        [Range(0, 50, ErrorMessage = "Experience years must be between 0 and 50")]
-        public int? ExperienceYears { get; set; }
-
-        [Column("employment_date")]
-        public DateTime? EmploymentDate { get; set; }
-
-        [Column("department")]
-        [StringLength(100)]
-        public string? Department { get; set; }
-
-        [Column("is_class_teacher")]
-        public bool IsClassTeacher { get; set; } = false;
-
-        [Column("class_teacher_for")]
-        [StringLength(50)]
-        public string? ClassTeacherFor { get; set; }
-
-        [Column("is_active")]
-        public bool IsActive { get; set; } = true;
-
-        [Column("profile_picture_url")]
-        [Url]
-        public string? ProfilePictureUrl { get; set; }
-
-        [Column("performance_rating")]
-        [Range(1, 5, ErrorMessage = "Performance rating must be between 1 and 5")]
-        public decimal? PerformanceRating { get; set; }
-
-        [Column("email")]
-        [EmailAddress]
-        [StringLength(255)]
-        public string? Email { get; set; }
-
-        [Column("phone_number")]
-        [Phone]
-        [StringLength(15)]
-        public string? PhoneNumber { get; set; }
-
-        [Column("national_id")]
-        [StringLength(20)]
-        public string? NationalId { get; set; }
-
-        [Column("bank_account")]
-        [StringLength(50)]
-        public string? BankAccount { get; set; }
-
-        [Column("monthly_salary")]
-        [Range(0, double.MaxValue)]
-        public decimal? MonthlySalary { get; set; }
-
-        public override ValidationResult Validate()
-        {
-            var result = base.Validate();
-
-            // Validate employee type
-            var validEmployeeTypes = new[] { "BOM", "NTSC", "Contract", "Volunteer" };
-            if (!validEmployeeTypes.Contains(EmployeeType))
-            {
-                result.Errors.Add("Invalid employee type");
-                result.IsValid = false;
-            }
-
-            // TSC number required for NTSC employees
-            if (EmployeeType == "NTSC" && string.IsNullOrWhiteSpace(TscNumber))
-            {
-                result.Errors.Add("TSC number is required for NTSC employees");
-                result.IsValid = false;
-            }
-
-            return result;
-        }
-    }
-
-    #endregion
-
-    #region Staff Models
-
-    /// <summary>
-    /// Staff Entity
-    /// </summary>
-    [Table("staff")]
-    public class StaffEntity : BaseSupabaseModel
-    {
-        [PrimaryKey("id", false)]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        [Column("user_id")]
-        [Required]
-        public string UserId { get; set; } = string.Empty;
-
-        [Column("staff_id")]
-        [Required]
-        [StringLength(50)]
-        public string StaffId { get; set; } = string.Empty;
-
-        [Column("full_name")]
-        [Required]
-        [StringLength(255, MinimumLength = 2)]
-        public string FullName { get; set; } = string.Empty;
-
-        [Column("position")]
-        [Required]
-        [StringLength(100)]
-        public string Position { get; set; } = string.Empty;
-
-        [Column("department")]
-        [StringLength(100)]
-        public string? Department { get; set; }
-
-        [Column("employment_date")]
-        public DateTime? EmploymentDate { get; set; }
-
-        [Column("qualification")]
-        [StringLength(500)]
-        public string? Qualification { get; set; }
-
-        [Column("salary")]
-        [Range(0, double.MaxValue)]
-        public decimal? Salary { get; set; }
-
-        [Column("office_location")]
-        [StringLength(100)]
-        public string? OfficeLocation { get; set; }
-
-        [Column("is_active")]
-        public bool IsActive { get; set; } = true;
-
-        [Column("profile_picture_url")]
-        [Url]
-        public string? ProfilePictureUrl { get; set; }
-
-        [Column("permissions")]
-        [JsonConverter(typeof(JsonStringArrayConverter))]
-        public List<string> Permissions { get; set; } = new();
-
-        [Column("email")]
-        [EmailAddress]
-        [StringLength(255)]
-        public string? Email { get; set; }
-
-        [Column("phone_number")]
-        [Phone]
-        [StringLength(15)]
-        public string? PhoneNumber { get; set; }
-
-        [Column("national_id")]
-        [StringLength(20)]
-        public string? NationalId { get; set; }
-
-        [Column("bank_account")]
-        [StringLength(50)]
-        public string? BankAccount { get; set; }
-
-        public override ValidationResult Validate()
-        {
-            var result = base.Validate();
-
-            // Validate position
-            var validPositions = new[] { "Principal", "DeputyPrincipal", "Secretary", "Bursar", "Librarian", "LabTechnician", "ComputerLabTechnician", "Cook", "Gardener", "BoardingMaster" };
-            if (!validPositions.Contains(Position))
-            {
-                result.Errors.Add("Invalid staff position");
-                result.IsValid = false;
-            }
-
-            return result;
         }
     }
 
@@ -966,180 +984,6 @@ namespace OlkalouStudentSystem.Models.Data
         }
     }
 
-    /// <summary>
-    /// Mark Entity
-    /// </summary>
-    [Table("marks")]
-    public class MarkEntity : BaseSupabaseModel
-    {
-        [PrimaryKey("id", false)]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        [Column("student_id")]
-        [Required]
-        public string StudentId { get; set; } = string.Empty;
-
-        [Column("subject")]
-        [Required]
-        [StringLength(100)]
-        public string Subject { get; set; } = string.Empty;
-
-        [Column("opening_marks")]
-        [Range(0, 100)]
-        public decimal? OpeningMarks { get; set; }
-
-        [Column("midterm_marks")]
-        [Range(0, 100)]
-        public decimal? MidtermMarks { get; set; }
-
-        [Column("final_exam_marks")]
-        [Range(0, 100)]
-        public decimal? FinalExamMarks { get; set; }
-
-        [Column("total_marks")]
-        [Required]
-        [Range(0, 100)]
-        public decimal TotalMarks { get; set; }
-
-        [Column("max_marks")]
-        [Range(1, 100)]
-        public decimal MaxMarks { get; set; } = 100;
-
-        [Column("percentage")]
-        [Range(0, 100)]
-        public decimal Percentage { get; set; }
-
-        [Column("grade")]
-        [Required]
-        [StringLength(5)]
-        public string Grade { get; set; } = string.Empty;
-
-        [Column("points")]
-        [Range(0, 12)]
-        public decimal? Points { get; set; }
-
-        [Column("term")]
-        [Required]
-        [Range(1, 3)]
-        public int Term { get; set; }
-
-        [Column("year")]
-        [Required]
-        [Range(2020, 2050)]
-        public int Year { get; set; } = DateTime.UtcNow.Year;
-
-        [Column("exam_type")]
-        [Required]
-        [StringLength(50)]
-        public string ExamType { get; set; } = "End of Term";
-
-        [Column("teacher_id")]
-        [Required]
-        public string TeacherId { get; set; } = string.Empty;
-
-        [Column("is_approved")]
-        public bool IsApproved { get; set; } = false;
-
-        [Column("approved_by")]
-        [StringLength(100)]
-        public string? ApprovedBy { get; set; }
-
-        [Column("approval_date")]
-        public DateTime? ApprovalDate { get; set; }
-
-        [Column("teacher_comments")]
-        [StringLength(500)]
-        public string? TeacherComments { get; set; }
-
-        /// <summary>
-        /// Calculate total marks based on components
-        /// </summary>
-        public void CalculateTotalMarks()
-        {
-            var opening = OpeningMarks ?? 0;
-            var midterm = MidtermMarks ?? 0;
-            var final = FinalExamMarks ?? 0;
-
-            // Standard Kenyan grading: Opening 15%, Midterm 15%, Final 70%
-            TotalMarks = (opening * 0.15m) + (midterm * 0.15m) + (final * 0.70m);
-            Percentage = (TotalMarks / MaxMarks) * 100;
-        }
-
-        public override ValidationResult Validate()
-        {
-            var result = base.Validate();
-
-            // Validate exam type
-            var validExamTypes = new[] { "CAT", "Mid-Term", "End of Term", "Mock", "KCSE" };
-            if (!validExamTypes.Contains(ExamType))
-            {
-                result.Errors.Add("Invalid exam type");
-                result.IsValid = false;
-            }
-
-            // Validate grade
-            var validGrades = new[] { "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "E" };
-            if (!validGrades.Contains(Grade))
-            {
-                result.Errors.Add("Invalid grade");
-                result.IsValid = false;
-            }
-
-            return result;
-        }
-    }
-
-    /// <summary>
-    /// Grading System Entity
-    /// </summary>
-    [Table("grading_system")]
-    public class GradingSystemEntity : BaseSupabaseModel
-    {
-        [PrimaryKey("id", false)]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        [Column("grade")]
-        [Required]
-        [StringLength(5)]
-        public string Grade { get; set; } = string.Empty;
-
-        [Column("min_percentage")]
-        [Required]
-        [Range(0, 100)]
-        public decimal MinPercentage { get; set; }
-
-        [Column("max_percentage")]
-        [Required]
-        [Range(0, 100)]
-        public decimal MaxPercentage { get; set; }
-
-        [Column("points")]
-        [Required]
-        [Range(0, 12)]
-        public decimal Points { get; set; }
-
-        [Column("description")]
-        [StringLength(500)]
-        public string? Description { get; set; }
-
-        [Column("is_active")]
-        public bool IsActive { get; set; } = true;
-
-        public override ValidationResult Validate()
-        {
-            var result = base.Validate();
-
-            // Min percentage should be less than max percentage
-            if (MinPercentage >= MaxPercentage)
-            {
-                result.Errors.Add("Minimum percentage must be less than maximum percentage");
-                result.IsValid = false;
-            }
-
-            return result;
-        }
-    }
-
     #endregion
 
     #region Library Models
@@ -1463,737 +1307,6 @@ namespace OlkalouStudentSystem.Models.Data
             if (!validActivityTypes.Contains(ActivityType))
             {
                 result.Errors.Add("Invalid activity type");
-                result.IsValid = false;
-            }
-
-            return result;
-        }
-    }
-
-    /// <summary>
-    /// Activity Registration Entity
-    /// </summary>
-    [Table("activity_registrations")]
-    public class ActivityRegistrationEntity : BaseSupabaseModel
-    {
-        [PrimaryKey("id", false)]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        [Column("activity_id")]
-        [Required]
-        public string ActivityId { get; set; } = string.Empty;
-
-        [Column("student_id")]
-        [Required]
-        public string StudentId { get; set; } = string.Empty;
-
-        [Column("registration_date")]
-        [Required]
-        public DateTime RegistrationDate { get; set; } = DateTime.UtcNow;
-
-        [Column("status")]
-        [Required]
-        [StringLength(50)]
-        public string Status { get; set; } = "Registered";
-
-        [Column("payment_status")]
-        [StringLength(50)]
-        public string? PaymentStatus { get; set; }
-
-        [Column("attendance_marked")]
-        public bool AttendanceMarked { get; set; } = false;
-
-        [Column("attendance_date")]
-        public DateTime? AttendanceDate { get; set; }
-
-        [Column("notes")]
-        [StringLength(500)]
-        public string? Notes { get; set; }
-
-        public override ValidationResult Validate()
-        {
-            var result = base.Validate();
-
-            // Validate status
-            var validStatuses = new[] { "Registered", "Attended", "Absent", "Cancelled" };
-            if (!validStatuses.Contains(Status))
-            {
-                result.Errors.Add("Invalid registration status");
-                result.IsValid = false;
-            }
-
-            return result;
-        }
-    }
-
-    #endregion
-
-    #region Achievement Models
-
-    /// <summary>
-    /// Achievement Entity
-    /// </summary>
-    [Table("achievements")]
-    public class AchievementEntity : BaseSupabaseModel
-    {
-        [PrimaryKey("id", false)]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        [Column("student_id")]
-        [Required]
-        public string StudentId { get; set; } = string.Empty;
-
-        [Column("achievement_id")]
-        [Required]
-        [StringLength(50)]
-        public string AchievementId { get; set; } = string.Empty;
-
-        [Column("title")]
-        [Required]
-        [StringLength(255, MinimumLength = 3)]
-        public string Title { get; set; } = string.Empty;
-
-        [Column("description")]
-        [Required]
-        [StringLength(1000, MinimumLength = 10)]
-        public string Description { get; set; } = string.Empty;
-
-        [Column("type")]
-        [Required]
-        [StringLength(50)]
-        public string Type { get; set; } = string.Empty;
-
-        [Column("date")]
-        [Required]
-        public DateTime Date { get; set; }
-
-        [Column("awarded_by")]
-        [Required]
-        [StringLength(100)]
-        public string AwardedBy { get; set; } = string.Empty;
-
-        [Column("category")]
-        [Required]
-        [StringLength(100)]
-        public string Category { get; set; } = string.Empty;
-
-        [Column("level")]
-        [Required]
-        [StringLength(50)]
-        public string Level { get; set; } = string.Empty;
-
-        [Column("position")]
-        [Range(1, 100)]
-        public int? Position { get; set; }
-
-        [Column("points")]
-        [Range(0, 1000)]
-        public int? Points { get; set; }
-
-        [Column("certificate_path")]
-        [StringLength(500)]
-        public string? CertificatePath { get; set; }
-
-        [Column("certificate_url")]
-        [Url]
-        public string? CertificateUrl { get; set; }
-
-        [Column("is_verified")]
-        public bool IsVerified { get; set; } = false;
-
-        [Column("verified_by")]
-        [StringLength(100)]
-        public string? VerifiedBy { get; set; }
-
-        [Column("verification_date")]
-        public DateTime? VerificationDate { get; set; }
-
-        public override ValidationResult Validate()
-        {
-            var result = base.Validate();
-
-            // Validate achievement type
-            var validTypes = new[] { "Academic", "Sports", "Leadership", "Arts", "Community Service", "Other" };
-            if (!validTypes.Contains(Type))
-            {
-                result.Errors.Add("Invalid achievement type");
-                result.IsValid = false;
-            }
-
-            // Validate level
-            var validLevels = new[] { "School", "County", "Regional", "National", "International" };
-            if (!validLevels.Contains(Level))
-            {
-                result.Errors.Add("Invalid achievement level");
-                result.IsValid = false;
-            }
-
-            return result;
-        }
-    }
-
-    #endregion
-
-    #region Communication Models
-
-    /// <summary>
-    /// Announcement Entity
-    /// </summary>
-    [Table("announcements")]
-    public class AnnouncementEntity : BaseSupabaseModel
-    {
-        [PrimaryKey("id", false)]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        [Column("title")]
-        [Required]
-        [StringLength(255, MinimumLength = 3)]
-        public string Title { get; set; } = string.Empty;
-
-        [Column("content")]
-        [Required]
-        [StringLength(5000, MinimumLength = 10)]
-        public string Content { get; set; } = string.Empty;
-
-        [Column("announcement_type")]
-        [Required]
-        [StringLength(50)]
-        public string AnnouncementType { get; set; } = "General";
-
-        [Column("priority")]
-        [Required]
-        [StringLength(20)]
-        public string Priority { get; set; } = "Normal";
-
-        [Column("target_audience")]
-        [JsonConverter(typeof(JsonStringArrayConverter))]
-        public List<string> TargetAudience { get; set; } = new();
-
-        [Column("target_forms")]
-        [JsonConverter(typeof(JsonStringArrayConverter))]
-        public List<string> TargetForms { get; set; } = new();
-
-        [Column("is_published")]
-        public bool IsPublished { get; set; } = false;
-
-        [Column("publish_date")]
-        public DateTime? PublishDate { get; set; }
-
-        [Column("expiry_date")]
-        public DateTime? ExpiryDate { get; set; }
-
-        [Column("is_active")]
-        public bool IsActive { get; set; } = true;
-
-        /// <summary>
-        /// Check if announcement is active
-        /// </summary>
-        public bool IsCurrentlyActive => IsPublished && IsActive &&
-                               (PublishDate == null || PublishDate <= DateTime.UtcNow) &&
-                               (ExpiryDate == null || ExpiryDate > DateTime.UtcNow);
-
-        public override ValidationResult Validate()
-        {
-            var result = base.Validate();
-
-            // Validate announcement type
-            var validTypes = new[] { "General", "Academic", "Event", "Emergency", "Fee", "Administrative" };
-            if (!validTypes.Contains(AnnouncementType))
-            {
-                result.Errors.Add("Invalid announcement type");
-                result.IsValid = false;
-            }
-
-            // Validate priority
-            var validPriorities = new[] { "Low", "Normal", "High", "Urgent" };
-            if (!validPriorities.Contains(Priority))
-            {
-                result.Errors.Add("Invalid priority level");
-                result.IsValid = false;
-            }
-
-            // Expiry date should be after publish date
-            if (ExpiryDate.HasValue && PublishDate.HasValue && ExpiryDate <= PublishDate)
-            {
-                result.Errors.Add("Expiry date must be after publish date");
-                result.IsValid = false;
-            }
-
-            return result;
-        }
-    }
-
-    #endregion
-
-    #region Attendance Models
-
-    /// <summary>
-    /// Attendance Entity
-    /// </summary>
-    [Table("attendance")]
-    public class AttendanceEntity : BaseSupabaseModel
-    {
-        [PrimaryKey("id", false)]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        [Column("student_id")]
-        [Required]
-        public string StudentId { get; set; } = string.Empty;
-
-        [Column("date")]
-        [Required]
-        public DateTime Date { get; set; }
-
-        [Column("status")]
-        [Required]
-        [StringLength(20)]
-        public string Status { get; set; } = string.Empty;
-
-        [Column("time_in")]
-        public TimeSpan? TimeIn { get; set; }
-
-        [Column("time_out")]
-        public TimeSpan? TimeOut { get; set; }
-
-        [Column("reason")]
-        [StringLength(500)]
-        public string? Reason { get; set; }
-
-        [Column("marked_by")]
-        [Required]
-        [StringLength(100)]
-        public string MarkedBy { get; set; } = string.Empty;
-
-        public override ValidationResult Validate()
-        {
-            var result = base.Validate();
-
-            // Validate status
-            var validStatuses = new[] { "Present", "Absent", "Late", "Excused", "Sick" };
-            if (!validStatuses.Contains(Status))
-            {
-                result.Errors.Add("Invalid attendance status");
-                result.IsValid = false;
-            }
-
-            // Time out should be after time in
-            if (TimeIn.HasValue && TimeOut.HasValue && TimeOut <= TimeIn)
-            {
-                result.Errors.Add("Time out must be after time in");
-                result.IsValid = false;
-            }
-
-            return result;
-        }
-    }
-
-    #endregion
-
-    #region Disciplinary Models
-
-    /// <summary>
-    /// Disciplinary Issue Entity
-    /// </summary>
-    [Table("disciplinary_issues")]
-    public class DisciplinaryIssueEntity : BaseSupabaseModel
-    {
-        [PrimaryKey("id", false)]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        [Column("student_id")]
-        [Required]
-        public string StudentId { get; set; } = string.Empty;
-
-        [Column("issue_type")]
-        [Required]
-        [StringLength(100)]
-        public string IssueType { get; set; } = string.Empty;
-
-        [Column("issue_description")]
-        [Required]
-        [StringLength(2000, MinimumLength = 10)]
-        public string IssueDescription { get; set; } = string.Empty;
-
-        [Column("action_taken")]
-        [StringLength(1000)]
-        public string? ActionTaken { get; set; }
-
-        [Column("severity_level")]
-        [Required]
-        [StringLength(20)]
-        public string SeverityLevel { get; set; } = "Minor";
-
-        [Column("is_suspension")]
-        public bool IsSuspension { get; set; } = false;
-
-        [Column("suspension_duration")]
-        [Range(1, 365)]
-        public int? SuspensionDuration { get; set; }
-
-        [Column("suspension_start_date")]
-        public DateTime? SuspensionStartDate { get; set; }
-
-        [Column("suspension_end_date")]
-        public DateTime? SuspensionEndDate { get; set; }
-
-        [Column("issued_by")]
-        [Required]
-        [StringLength(100)]
-        public string IssuedBy { get; set; } = string.Empty;
-
-        [Column("approved_by")]
-        [StringLength(100)]
-        public string? ApprovedBy { get; set; }
-
-        [Column("status")]
-        [Required]
-        [StringLength(50)]
-        public string Status { get; set; } = "Pending";
-
-        [Column("issue_date")]
-        [Required]
-        public DateTime IssueDate { get; set; } = DateTime.UtcNow;
-
-        [Column("approval_date")]
-        public DateTime? ApprovalDate { get; set; }
-
-        [Column("resolution_date")]
-        public DateTime? ResolutionDate { get; set; }
-
-        [Column("parent_notified")]
-        public bool ParentNotified { get; set; } = false;
-
-        [Column("notification_date")]
-        public DateTime? NotificationDate { get; set; }
-
-        public override ValidationResult Validate()
-        {
-            var result = base.Validate();
-
-            // Validate severity level
-            var validSeverityLevels = new[] { "Minor", "Major", "Critical" };
-            if (!validSeverityLevels.Contains(SeverityLevel))
-            {
-                result.Errors.Add("Invalid severity level");
-                result.IsValid = false;
-            }
-
-            // Validate status
-            var validStatuses = new[] { "Pending", "Approved", "Rejected", "Resolved" };
-            if (!validStatuses.Contains(Status))
-            {
-                result.Errors.Add("Invalid status");
-                result.IsValid = false;
-            }
-
-            // Suspension validation
-            if (IsSuspension)
-            {
-                if (!SuspensionDuration.HasValue)
-                {
-                    result.Errors.Add("Suspension duration is required for suspensions");
-                    result.IsValid = false;
-                }
-
-                if (!SuspensionStartDate.HasValue)
-                {
-                    result.Errors.Add("Suspension start date is required for suspensions");
-                    result.IsValid = false;
-                }
-            }
-
-            return result;
-        }
-    }
-
-    #endregion
-
-    #region Timetable Models
-
-    /// <summary>
-    /// Timetable Entity
-    /// </summary>
-    [Table("timetable")]
-    public class TimetableEntity : BaseSupabaseModel
-    {
-        [PrimaryKey("id", false)]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        [Column("class")]
-        [Required]
-        [StringLength(20)]
-        public string Class { get; set; } = string.Empty;
-
-        [Column("day_of_week")]
-        [Required]
-        [Range(1, 7)]
-        public int DayOfWeek { get; set; }
-
-        [Column("period")]
-        [Required]
-        [Range(1, 10)]
-        public int Period { get; set; }
-
-        [Column("start_time")]
-        [Required]
-        public TimeSpan StartTime { get; set; }
-
-        [Column("end_time")]
-        [Required]
-        public TimeSpan EndTime { get; set; }
-
-        [Column("subject")]
-        [Required]
-        [StringLength(100)]
-        public string Subject { get; set; } = string.Empty;
-
-        [Column("teacher_id")]
-        [Required]
-        public string TeacherId { get; set; } = string.Empty;
-
-        [Column("room")]
-        [StringLength(50)]
-        public string? Room { get; set; }
-
-        [Column("term")]
-        [Required]
-        [Range(1, 3)]
-        public int Term { get; set; }
-
-        [Column("year")]
-        [Required]
-        [Range(2020, 2050)]
-        public int Year { get; set; } = DateTime.UtcNow.Year;
-
-        [Column("is_active")]
-        public bool IsActive { get; set; } = true;
-
-        public override ValidationResult Validate()
-        {
-            var result = base.Validate();
-
-            // End time should be after start time
-            if (EndTime <= StartTime)
-            {
-                result.Errors.Add("End time must be after start time");
-                result.IsValid = false;
-            }
-
-            return result;
-        }
-    }
-
-    #endregion
-
-    #region Exam Models
-
-    /// <summary>
-    /// Exam Entity
-    /// </summary>
-    [Table("exams")]
-    public class ExamEntity : BaseSupabaseModel
-    {
-        [PrimaryKey("id", false)]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        [Column("exam_id")]
-        [Required]
-        [StringLength(50)]
-        public string ExamId { get; set; } = string.Empty;
-
-        [Column("title")]
-        [Required]
-        [StringLength(255, MinimumLength = 3)]
-        public string Title { get; set; } = string.Empty;
-
-        [Column("exam_type")]
-        [Required]
-        [StringLength(50)]
-        public string ExamType { get; set; } = string.Empty;
-
-        [Column("subject")]
-        [Required]
-        [StringLength(100)]
-        public string Subject { get; set; } = string.Empty;
-
-        [Column("form")]
-        [Required]
-        [StringLength(20)]
-        public string Form { get; set; } = string.Empty;
-
-        [Column("date")]
-        [Required]
-        public DateTime Date { get; set; }
-
-        [Column("start_time")]
-        [Required]
-        public TimeSpan StartTime { get; set; }
-
-        [Column("duration_minutes")]
-        [Required]
-        [Range(15, 300)]
-        public int DurationMinutes { get; set; }
-
-        [Column("max_marks")]
-        [Required]
-        [Range(1, 1000)]
-        public int MaxMarks { get; set; }
-
-        [Column("room")]
-        [StringLength(50)]
-        public string? Room { get; set; }
-
-        [Column("instructions")]
-        [StringLength(2000)]
-        public string? Instructions { get; set; }
-
-        [Column("term")]
-        [Required]
-        [Range(1, 3)]
-        public int Term { get; set; }
-
-        [Column("year")]
-        [Required]
-        [Range(2020, 2050)]
-        public int Year { get; set; } = DateTime.UtcNow.Year;
-
-        [Column("is_published")]
-        public bool IsPublished { get; set; } = false;
-
-        /// <summary>
-        /// Calculate exam end time
-        /// </summary>
-        public DateTime EndTime => Date.Add(StartTime).AddMinutes(DurationMinutes);
-
-        /// <summary>
-        /// Check if exam is upcoming
-        /// </summary>
-        public bool IsUpcoming => Date > DateTime.UtcNow;
-
-        /// <summary>
-        /// Check if exam is completed
-        /// </summary>
-        public bool IsCompleted => EndTime < DateTime.UtcNow;
-
-        public override ValidationResult Validate()
-        {
-            var result = base.Validate();
-
-            // Validate exam type
-            var validExamTypes = new[] { "CAT", "Mid-Term", "End of Term", "Mock", "KCSE", "Quiz" };
-            if (!validExamTypes.Contains(ExamType))
-            {
-                result.Errors.Add("Invalid exam type");
-                result.IsValid = false;
-            }
-
-            return result;
-        }
-    }
-
-    #endregion
-
-    #region System Models
-
-    /// <summary>
-    /// App Settings Entity
-    /// </summary>
-    [Table("app_settings")]
-    public class AppSettingsEntity : BaseSupabaseModel
-    {
-        [PrimaryKey("id", false)]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        [Column("key")]
-        [Required]
-        [StringLength(100)]
-        public string Key { get; set; } = string.Empty;
-
-        [Column("value")]
-        [Required]
-        [StringLength(2000)]
-        public string Value { get; set; } = string.Empty;
-
-        [Column("description")]
-        [StringLength(500)]
-        public string? Description { get; set; }
-
-        [Column("category")]
-        [Required]
-        [StringLength(50)]
-        public string Category { get; set; } = "General";
-
-        [Column("is_public")]
-        public bool IsPublic { get; set; } = false;
-
-        [Column("updated_by")]
-        public string? UpdatedBy { get; set; }
-
-        public override ValidationResult Validate()
-        {
-            var result = base.Validate();
-
-            // Validate category
-            var validCategories = new[] { "General", "Academic", "Financial", "System", "Security" };
-            if (!validCategories.Contains(Category))
-            {
-                result.Errors.Add("Invalid settings category");
-                result.IsValid = false;
-            }
-
-            return result;
-        }
-    }
-
-    /// <summary>
-    /// Audit Log Entity
-    /// </summary>
-    [Table("audit_logs")]
-    public class AuditLogEntity : BaseSupabaseModel
-    {
-        [PrimaryKey("id", false)]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        [Column("user_id")]
-        [Required]
-        public string UserId { get; set; } = string.Empty;
-
-        [Column("action")]
-        [Required]
-        [StringLength(100)]
-        public string Action { get; set; } = string.Empty;
-
-        [Column("table_name")]
-        [StringLength(100)]
-        public string? TableName { get; set; }
-
-        [Column("record_id")]
-        [StringLength(100)]
-        public string? RecordId { get; set; }
-
-        [Column("old_values")]
-        public string? OldValues { get; set; }
-
-        [Column("new_values")]
-        public string? NewValues { get; set; }
-
-        [Column("ip_address")]
-        [StringLength(45)]
-        public string? IpAddress { get; set; }
-
-        [Column("user_agent")]
-        [StringLength(500)]
-        public string? UserAgent { get; set; }
-
-        public override ValidationResult Validate()
-        {
-            var result = base.Validate();
-
-            // Validate action
-            var validActions = new[] { "CREATE", "UPDATE", "DELETE", "LOGIN", "LOGOUT", "VIEW" };
-            if (!validActions.Contains(Action.ToUpper()))
-            {
-                result.Errors.Add("Invalid audit action");
                 result.IsValid = false;
             }
 

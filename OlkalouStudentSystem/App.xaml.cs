@@ -3,7 +3,6 @@
 // ===============================
 using OlkalouStudentSystem.Services;
 using OlkalouStudentSystem.Models.Data;
-using OlkalouStudentSystem.Data;
 
 namespace OlkalouStudentSystem;
 
@@ -40,7 +39,7 @@ public partial class App : Application
     {
         try
         {
-            var initializer = Handler?.MauiContext?.Services?.GetService<DatabaseInitializer>();
+            var initializer = Handler?.MauiContext?.Services?.GetService<DbInitializer>();
             if (initializer != null)
             {
                 await initializer.InitializeAsync();

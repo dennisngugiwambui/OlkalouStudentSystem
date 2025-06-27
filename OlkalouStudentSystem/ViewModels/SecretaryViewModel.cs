@@ -1,5 +1,5 @@
 ﻿// ===============================
-// ViewModels/SecretaryViewModel.cs - Complete Secretary Management ViewModel
+// ViewModels/SecretaryViewModel.cs - Complete Error-Free Secretary Management ViewModel
 // ===============================
 using System.Collections.ObjectModel;
 using System.Windows.Input;
@@ -572,6 +572,7 @@ namespace OlkalouStudentSystem.ViewModels
             }
         }
 
+        // FIXED: Use Services.StudentRegistrationRequest
         private async Task RegisterStudentAsync()
         {
             if (IsBusy) return;
@@ -580,7 +581,7 @@ namespace OlkalouStudentSystem.ViewModels
             {
                 IsBusy = true;
 
-                var request = new StudentRegistrationRequest
+                var request = new Services.StudentRegistrationRequest
                 {
                     FullName = StudentFullName.Trim(),
                     AdmissionNo = StudentAdmissionNo.Trim(),
@@ -646,6 +647,7 @@ namespace OlkalouStudentSystem.ViewModels
             GuardianPhone = string.Empty;
         }
 
+        // FIXED: Use Services.TeacherRegistrationRequest
         private async Task RegisterTeacherAsync()
         {
             if (IsBusy) return;
@@ -654,7 +656,7 @@ namespace OlkalouStudentSystem.ViewModels
             {
                 IsBusy = true;
 
-                var request = new TeacherRegistrationRequest
+                var request = new Services.TeacherRegistrationRequest
                 {
                     FullName = TeacherFullName.Trim(),
                     PhoneNumber = FormatPhoneNumber(TeacherPhoneNumber),
@@ -662,7 +664,10 @@ namespace OlkalouStudentSystem.ViewModels
                     TscNumber = string.IsNullOrWhiteSpace(TeacherTscNumber) ? null : TeacherTscNumber.Trim(),
                     NtscPayment = TeacherEmployeeType == "NTSC" ? TeacherNtscPayment : null,
                     Subjects = new List<string>(), // Will be assigned later
-                    AssignedForms = new List<string>()
+                    AssignedForms = new List<string>(),
+                    Email = string.IsNullOrWhiteSpace(TeacherEmail) ? null : TeacherEmail.Trim(),
+                    Qualification = string.IsNullOrWhiteSpace(TeacherQualification) ? null : TeacherQualification.Trim(),
+                    Department = string.IsNullOrWhiteSpace(TeacherDepartment) ? null : TeacherDepartment.Trim()
                 };
 
                 var result = await _registrationService.RegisterTeacherAsync(request);
@@ -715,6 +720,7 @@ namespace OlkalouStudentSystem.ViewModels
             TeacherDepartment = string.Empty;
         }
 
+        // FIXED: Use Services.StaffRegistrationRequest
         private async Task RegisterStaffAsync()
         {
             if (IsBusy) return;
@@ -723,12 +729,13 @@ namespace OlkalouStudentSystem.ViewModels
             {
                 IsBusy = true;
 
-                var request = new StaffRegistrationRequest
+                var request = new Services.StaffRegistrationRequest
                 {
                     FullName = StaffFullName.Trim(),
                     PhoneNumber = FormatPhoneNumber(StaffPhoneNumber),
                     Position = StaffPosition,
-                    Department = string.IsNullOrWhiteSpace(StaffDepartment) ? null : StaffDepartment.Trim()
+                    Department = string.IsNullOrWhiteSpace(StaffDepartment) ? null : StaffDepartment.Trim(),
+                    Email = string.IsNullOrWhiteSpace(StaffEmail) ? null : StaffEmail.Trim()
                 };
 
                 var result = await _registrationService.RegisterStaffAsync(request);
@@ -986,7 +993,7 @@ namespace OlkalouStudentSystem.ViewModels
         {
             try
             {
-                CurrentUserName = await SecureStorage.GetAsync("full_name") ?? "Secretary";
+                CurrentUserName = await Microsoft.Maui.Storage.SecureStorage.GetAsync("full_name") ?? "Secretary";
                 Title = $"Secretary Dashboard - {CurrentUserName}";
             }
             catch (Exception ex)
@@ -1203,7 +1210,7 @@ namespace OlkalouStudentSystem.ViewModels
         {
             try
             {
-                return await SecureStorage.GetAsync("user_id") ?? "secretary";
+                return await Microsoft.Maui.Storage.SecureStorage.GetAsync("user_id") ?? "secretary";
             }
             catch
             {
@@ -1215,7 +1222,7 @@ namespace OlkalouStudentSystem.ViewModels
         {
             try
             {
-                await Application.Current.MainPage.DisplayAlert(title, message, "OK");
+                await Microsoft.Maui.Controls.Application.Current.MainPage.DisplayAlert(title, message, "OK");
             }
             catch (Exception ex)
             {
@@ -1227,7 +1234,7 @@ namespace OlkalouStudentSystem.ViewModels
         {
             try
             {
-                await Application.Current.MainPage.DisplayAlert(title, message, "OK");
+                await Microsoft.Maui.Controls.Application.Current.MainPage.DisplayAlert(title, message, "OK");
             }
             catch (Exception ex)
             {
@@ -1264,7 +1271,7 @@ namespace OlkalouStudentSystem.ViewModels
         {
             try
             {
-                await Shell.Current.GoToAsync(route);
+                await Microsoft.Maui.Controls.Shell.Current.GoToAsync(route);
             }
             catch (Exception ex)
             {
@@ -1434,47 +1441,6 @@ namespace OlkalouStudentSystem.ViewModels
     }
 
     /// <summary>
-    /// Student registration request model
-    /// </summary>
-    public class StudentRegistrationRequest
-    {
-        public string FullName { get; set; } = string.Empty;
-        public string AdmissionNo { get; set; } = string.Empty;
-        public string Form { get; set; } = string.Empty;
-        public string Class { get; set; } = string.Empty;
-        public string? Email { get; set; }
-        public DateTime DateOfBirth { get; set; }
-        public string Gender { get; set; } = string.Empty;
-        public string? Address { get; set; }
-        public string ParentPhone { get; set; } = string.Empty;
-    }
-
-    /// <summary>
-    /// Teacher registration request model
-    /// </summary>
-    public class TeacherRegistrationRequest
-    {
-        public string FullName { get; set; } = string.Empty;
-        public string PhoneNumber { get; set; } = string.Empty;
-        public string EmployeeType { get; set; } = string.Empty;
-        public string? TscNumber { get; set; }
-        public decimal? NtscPayment { get; set; }
-        public List<string> Subjects { get; set; } = new();
-        public List<string> AssignedForms { get; set; } = new();
-    }
-
-    /// <summary>
-    /// Staff registration request model
-    /// </summary>
-    public class StaffRegistrationRequest
-    {
-        public string FullName { get; set; } = string.Empty;
-        public string PhoneNumber { get; set; } = string.Empty;
-        public string Position { get; set; } = string.Empty;
-        public string? Department { get; set; }
-    }
-
-    /// <summary>
     /// Registration result model
     /// </summary>
     public class RegistrationResult
@@ -1492,19 +1458,6 @@ namespace OlkalouStudentSystem.ViewModels
     {
         public string PhoneNumber { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
-    }
-
-    /// <summary>
-    /// User type enumeration
-    /// </summary>
-    public enum UserType
-    {
-        Student,
-        Teacher,
-        Staff,
-        Secretary,
-        Bursar,
-        Principal
     }
 
     #endregion
