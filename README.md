@@ -1,1 +1,1 @@
-This is an android 
+This is an android for .NET MAUI
